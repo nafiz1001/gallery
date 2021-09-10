@@ -10,9 +10,9 @@ type DB struct {
 	arts []arts.Art
 }
 
-func Init() DB {
+func Init() *DB {
 	db := DB{arts: []arts.Art{}}
-	return db
+	return &db
 }
 
 func (db *DB) StoreArt(a arts.Art) (*arts.Art, error) {
@@ -31,7 +31,7 @@ func (db *DB) RetrieveArt(id int) (*arts.Art, error) {
 	return nil, fmt.Errorf("could not find art with id %d", id)
 }
 
-func (db *DB) RetrieveAllArt() ([]arts.Art, error) {
+func (db *DB) RetrieveArts() ([]arts.Art, error) {
 	arts := make([]arts.Art, len(db.arts))
 	copy(arts, db.arts)
 	return arts, nil
