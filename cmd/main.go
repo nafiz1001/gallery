@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -11,166 +10,99 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/nafiz1001/gallery-go/arts"
+	"github.com/nafiz1001/gallery-go/db"
+	"github.com/nafiz1001/gallery-go/error_json"
 )
 
-type ErrorJson struct {
-	StatusCode int    `json:"status_code"`
-	Message    string `json:"message"`
-}
+func DecodeArt(r io.ReadCloser) (*arts.Art, error) {
+	var art *arts.Art
 
-func (e *ErrorJson) Error() string {
-	return e.Message
-}
-
-type Art struct {
-	Id       int    `json:"id"`
-	PickUp   bool   `json:"pickup"`
-	Picture  string `json:"picture"`
-	Price    int    `json:"price"`
-	Quantity int    `json:"quantity"`
-	Ship     bool   `json:"ship"`
-	Title    string `json:"title"`
-}
-
-func (a *Art) Update(art Art) {
-	a.PickUp = art.PickUp
-	a.Picture = art.Picture
-	a.Price = art.Price
-	a.Quantity = art.Quantity
-	a.Ship = art.Ship
-	a.Title = art.Title
-}
-
-func (a *Art) DecodeArt(r io.ReadCloser) error {
-	var err error
-
-	if err := json.NewDecoder(r).Decode(a); err != nil {
-		return &ErrorJson{
+	if err := json.NewDecoder(r).Decode(&art); err != nil {
+		return nil, &error_json.ErrorJson{
 			StatusCode: http.StatusUnprocessableEntity,
 			Message:    err.Error(),
 		}
+	} else {
+		return art, err
 	}
-
-	return err
 }
 
 func HandleError(err error, w http.ResponseWriter) {
 	if err != nil {
 		log.Println(err)
 
-		var errorJson *ErrorJson
+		var errorJson *error_json.ErrorJson
 		if !errors.As(err, &errorJson) {
-			errorJson = &ErrorJson{
+			errorJson = &error_json.ErrorJson{
 				StatusCode: http.StatusInternalServerError,
 				Message:    err.Error(),
 			}
 		}
 
-		w.WriteHeader(errorJson.StatusCode)
-		json.NewEncoder(w).Encode(errorJson)
+		http.Error(w, errorJson.Message, errorJson.StatusCode)
 	}
 }
 
 func main() {
-	arts := []Art{}
+	db := db.Init()
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var err error
-		var art Art
-
+	r.HandleFunc("/arts/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		if err := art.DecodeArt(r.Body); err == nil {
-			art.Id = len(arts)
-			arts = append(arts, art)
-			json.NewEncoder(w).Encode(art)
+		if art, err := DecodeArt(r.Body); err == nil {
+			if art, err := db.StoreArt(*art); err == nil {
+				json.NewEncoder(w).Encode(art)
+			} else {
+				HandleError(err, w)
+			}
+		} else {
+			HandleError(err, w)
 		}
-
-		HandleError(err, w)
 	}).Methods(http.MethodPost)
 
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/arts/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(arts)
+
+		if arts, err := db.RetrieveAllArt(); err == nil {
+			json.NewEncoder(w).Encode(arts)
+		} else {
+			HandleError(err, w)
+		}
 	}).Methods(http.MethodGet)
 
-	r.HandleFunc("/{id}", func(w http.ResponseWriter, r *http.Request) {
-		var err error
-		var art Art
-
+	r.HandleFunc("/arts/{id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		if err := art.DecodeArt(r.Body); err == nil {
+		if art, err := DecodeArt(r.Body); err == nil {
 			vars := mux.Vars(r)
-			id_string, ok := vars["id"]
+			id_string := vars["id"]
+			id, _ := strconv.Atoi(id_string)
+			art.Id = id
 
-			if !ok {
-				err = &ErrorJson{
-					StatusCode: http.StatusNotFound,
-					Message:    "id in path missing",
-				}
+			if art, err = db.UpdateArt(*art); err == nil {
+				json.NewEncoder(w).Encode(art)
 			} else {
-				if id, err := strconv.Atoi(id_string); err != nil {
-					err = &ErrorJson{
-						StatusCode: http.StatusNotFound,
-						Message:    fmt.Sprintf("could not find art with id %s", id_string),
-					}
-				} else {
-					for i := range arts {
-						if arts[i].Id == id {
-							arts[i].Update(art)
-							json.NewEncoder(w).Encode(arts[i])
-							return
-						}
-					}
-				}
+				HandleError(err, w)
 			}
+		} else {
+			HandleError(err, w)
 		}
-
-		HandleError(err, w)
 	}).Methods(http.MethodPut)
 
-	r.HandleFunc("/{id}", func(w http.ResponseWriter, r *http.Request) {
-		var err error
-
+	r.HandleFunc("/arts/{id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		vars := mux.Vars(r)
-		id_string, ok := vars["id"]
+		id_string := vars["id"]
+		id, _ := strconv.Atoi(id_string)
 
-		if !ok {
-			err = &ErrorJson{
-				StatusCode: http.StatusNotFound,
-				Message:    "id in path missing",
-			}
+		if art, err := db.DeleteArt(id); err == nil {
+			json.NewEncoder(w).Encode(art)
 		} else {
-			if id, err := strconv.Atoi(id_string); err != nil {
-				err = &ErrorJson{
-					StatusCode: http.StatusNotFound,
-					Message:    fmt.Sprintf("could not find art with id %s", id_string),
-				}
-			} else {
-				index := -1
-				for i := range arts {
-					if arts[i].Id == id {
-						index = i
-						break
-					}
-				}
-				if index < 0 {
-					err = &ErrorJson{
-						StatusCode: http.StatusNotFound,
-						Message:    fmt.Sprintf("could not find art with id %s", id_string),
-					}
-				} else {
-					json.NewEncoder(w).Encode(arts[index])
-					arts = append(arts[:index], arts[index+1:]...)
-				}
-			}
+			HandleError(err, w)
 		}
-
-		HandleError(err, w)
 	}).Methods(http.MethodDelete)
 
 	srv := &http.Server{
