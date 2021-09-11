@@ -3,6 +3,8 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -24,12 +26,21 @@ func GetArts(t *testing.T) []dto.ArtDto {
 	return arr
 }
 
-func NewRequest(t *testing.T, method string, url string, body string) (*http.Response, error) {
+func NewRequest(t *testing.T, method string, url string, body string, username string, password string) (*http.Response, error) {
 	if req, err := http.NewRequest(method, url, bytes.NewBufferString(body)); err != nil {
 		t.Fatal(err)
 		return nil, nil
 	} else {
-		return http.DefaultClient.Do(req)
+		req.Header.Set("Content-Type", "application/json")
+		if len(username) > 0 {
+			req.SetBasicAuth(username, password)
+		}
+		if resp, _ := http.DefaultClient.Do(req); 400 <= resp.StatusCode && resp.StatusCode <= 599 {
+			b, _ := io.ReadAll(resp.Body)
+			return resp, fmt.Errorf("%s: %s", resp.Status, string(b))
+		} else {
+			return resp, nil
+		}
 	}
 }
 
@@ -55,8 +66,21 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("%v length is not 0", arts)
 	}
 
-	if resp, err := http.Post("http://localhost:8080/arts", "application/json", bytes.NewBufferString(`{"title":"title"}`)); err != nil {
+	if _, err := http.Post("http://localhost:8080/accounts", "application/json", bytes.NewBufferString(`{"username":"bad", "password":"bad"}`)); err != nil {
 		t.Fatal(err)
+	}
+
+	if _, err := http.Post("http://localhost:8080/accounts", "application/json", bytes.NewBufferString(`{"username":"good", "password":"good"}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts", `{"title":"title"}`, "", ""); err == nil {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected to fail uploading because basic auth is missing\n%s", string(b))
+	}
+
+	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts", `{"title":"title"}`, "good", "good"); err != nil {
+		t.Fatalf("%s", err)
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
 			t.Fatal(err)
@@ -71,8 +95,12 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("the response (%v) does not have art with id %s", arts, art.Id)
 	}
 
-	if resp, err := NewRequest(t, http.MethodPut, "http://localhost:8080/arts/"+art.Id, `{"title":"title2"}`); err != nil {
+	if _, err := NewRequest(t, http.MethodPut, "http://localhost:8080/arts/"+art.Id, `{"title":"title2"}`, "bad", "bad"); err == nil {
 		t.Fatal(err)
+	}
+
+	if resp, err := NewRequest(t, http.MethodPut, "http://localhost:8080/arts/"+art.Id, `{"title":"title2"}`, "good", "good"); err != nil {
+		t.Fatalf("%s", err)
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
 			t.Fatal(err)
@@ -87,7 +115,15 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("the response (%v) does not have art with %s", arts, art.Title)
 	}
 
-	if resp, err := NewRequest(t, http.MethodDelete, "http://localhost:8080/arts/"+art.Id, ""); err != nil {
+	if _, err := NewRequest(t, http.MethodDelete, "http://localhost:8080/arts/"+art.Id, "", "bad", "bad"); err == nil {
+		t.Fatal(err)
+	}
+
+	if arts := GetArts(t); len(arts) != 1 {
+		t.Fatalf("%v length is not 1", arts)
+	}
+
+	if resp, err := NewRequest(t, http.MethodDelete, "http://localhost:8080/arts/"+art.Id, "", "good", "good"); err != nil {
 		t.Fatal(err)
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {

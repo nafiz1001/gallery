@@ -1,13 +1,10 @@
 package model
 
 import (
-	"crypto/sha1"
 	"fmt"
-	"math/rand"
-	"strconv"
-	"time"
 
 	"github.com/nafiz1001/gallery-go/dto"
+	"github.com/nafiz1001/gallery-go/util"
 )
 
 type ArtDB struct {
@@ -20,8 +17,7 @@ func (db *ArtDB) Init() error {
 }
 
 func (db *ArtDB) StoreArt(a dto.ArtDto) (*dto.ArtDto, error) {
-	rand.Seed(time.Now().UnixNano())
-	a.Id = fmt.Sprintf("%x", sha1.Sum([]byte(strconv.FormatInt(int64(rand.Int()), 36))))[:7]
+	a.Id = util.CreateId()
 	db.arts[a.Id] = &a
 	return &a, nil
 }
