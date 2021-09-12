@@ -25,61 +25,62 @@ func (h *ArtsHandler) Init(artDB *model.ArtDB, accountDB *model.AccountDB, accou
 	return nil
 }
 
-func (h ArtsHandler) PostArt(w http.ResponseWriter, r *http.Request, account *dto.AccountDto) {
+func (h ArtsHandler) PostArt(w http.ResponseWriter, r *http.Request, account dto.AccountDto) {
 	w.Header().Set("Content-Type", "application/json")
+
 	var art dto.ArtDto
 
-	if err := json.NewDecoder(r.Body).Decode(&art); err == nil {
-		if art, err := h.accountsArtsDB.AddArt(account, &art); err == nil {
-			json.NewEncoder(w).Encode(art)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	} else {
+	if err := json.NewDecoder(r.Body).Decode(&art); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+	} else {
+		if art, err := h.accountsArtsDB.AddArt(account, art); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		} else {
+			json.NewEncoder(w).Encode(art)
+		}
 	}
 }
 
 func (h ArtsHandler) GetArts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if arts, err := h.artDB.RetrieveArts(); err == nil {
-		json.NewEncoder(w).Encode(arts)
-	} else {
+	if arts, err := h.artDB.GetArts(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		json.NewEncoder(w).Encode(arts)
 	}
 }
 
 func (h ArtsHandler) GetArt(w http.ResponseWriter, r *http.Request, id string) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if arts, err := h.artDB.RetrieveArt(id); err == nil {
-		json.NewEncoder(w).Encode(arts)
-	} else {
+	if arts, err := h.artDB.GetArt(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		json.NewEncoder(w).Encode(arts)
 	}
 }
 
 func (h ArtsHandler) PutArt(w http.ResponseWriter, r *http.Request, art *dto.ArtDto) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if art, err := h.artDB.UpdateArt(*art); err == nil {
-		json.NewEncoder(w).Encode(art)
-	} else {
+	if art, err := h.artDB.UpdateArt(*art); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		json.NewEncoder(w).Encode(art)
 	}
 }
 
 func (h ArtsHandler) DeleteArt(w http.ResponseWriter, r *http.Request, id string) {
 	w.Header().Set("Content-Type", "application/json")
-	if art, err := h.accountsArtsDB.DeleteArt(id); err == nil {
-		json.NewEncoder(w).Encode(art)
-	} else {
+	if art, err := h.accountsArtsDB.DeleteArt(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		json.NewEncoder(w).Encode(art)
 	}
 }
 
-func (h ArtsHandler) AccountAuth(w http.ResponseWriter, r *http.Request, f func(*dto.AccountDto)) {
+func (h ArtsHandler) AccountAuth(w http.ResponseWriter, r *http.Request, f func(dto.AccountDto)) {
 	if username, password, ok := r.BasicAuth(); !ok {
 		http.Error(w, "missing or malformed Authorization header", http.StatusUnauthorized)
 	} else {
@@ -89,18 +90,18 @@ func (h ArtsHandler) AccountAuth(w http.ResponseWriter, r *http.Request, f func(
 			if password != account.Password {
 				http.Error(w, "password is incorrect", http.StatusUnauthorized)
 			} else {
-				f(account)
+				f(*account)
 			}
 		}
 	}
 }
 
-func (h ArtsHandler) AuthorAuth(w http.ResponseWriter, r *http.Request, id string, f func(*dto.AccountDto)) {
-	h.AccountAuth(w, r, func(account *dto.AccountDto) {
-		if h.accountsArtsDB.IsAuthor(account, id) {
-			f(account)
-		} else {
+func (h ArtsHandler) AuthorAuth(w http.ResponseWriter, r *http.Request, id string, f func(dto.AccountDto)) {
+	h.AccountAuth(w, r, func(account dto.AccountDto) {
+		if !h.accountsArtsDB.IsAuthor(account, id) {
 			http.Error(w, fmt.Sprintf("art does not belong to '%s'", account.Username), http.StatusUnauthorized)
+		} else {
+			f(account)
 		}
 	})
 }
@@ -115,7 +116,7 @@ func (h ArtsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"/arts": func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodPost:
-				h.AccountAuth(w, r, func(account *dto.AccountDto) {
+				h.AccountAuth(w, r, func(account dto.AccountDto) {
 					h.PostArt(w, r, account)
 				})
 			case http.MethodGet:
@@ -131,7 +132,7 @@ func (h ArtsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				case http.MethodGet:
 					h.GetArt(w, r, match[1])
 				case http.MethodPut:
-					h.AuthorAuth(w, r, match[1], func(account *dto.AccountDto) {
+					h.AuthorAuth(w, r, match[1], func(account dto.AccountDto) {
 						var art dto.ArtDto
 						if err := json.NewDecoder(r.Body).Decode(&art); err != nil {
 							http.Error(w, err.Error(), http.StatusUnprocessableEntity)
@@ -141,7 +142,7 @@ func (h ArtsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						}
 					})
 				case http.MethodDelete:
-					h.AuthorAuth(w, r, match[1], func(account *dto.AccountDto) {
+					h.AuthorAuth(w, r, match[1], func(account dto.AccountDto) {
 						h.DeleteArt(w, r, match[1])
 					})
 				default:

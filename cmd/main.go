@@ -10,7 +10,9 @@ import (
 
 func main() {
 	h := handler.GalleryHandler{}
-	h.Init()
+	if err := h.Init(); err != nil {
+		log.Fatal(err)
+	}
 
 	srv := &http.Server{
 		Handler: h,

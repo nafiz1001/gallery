@@ -16,20 +16,32 @@ type GalleryHandler struct {
 	accountsHandler AccountsHandler
 }
 
-func (h *GalleryHandler) Init() {
+func (h *GalleryHandler) Init() error {
 	h.artDB = &model.ArtDB{}
 	h.accountDB = &model.AccountDB{}
 	h.accountsArtsDB = &model.AccountsArtsDB{}
 
-	h.artDB.Init()
-	h.accountDB.Init()
-	h.accountsArtsDB.Init(h.accountDB, h.artDB)
+	if err := h.artDB.Init(); err != nil {
+		return err
+	}
+	if err := h.accountDB.Init(); err != nil {
+		return err
+	}
+	if err := h.accountsArtsDB.Init(h.accountDB, h.artDB); err != nil {
+		return err
+	}
 
 	h.artsHandler = ArtsHandler{}
-	h.artsHandler.Init(h.artDB, h.accountDB, h.accountsArtsDB)
+	if err := h.artsHandler.Init(h.artDB, h.accountDB, h.accountsArtsDB); err != nil {
+		return err
+	}
 
 	h.accountsHandler = AccountsHandler{}
-	h.accountsHandler.Init(h.accountDB)
+	if err := h.accountsHandler.Init(h.accountDB); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (h GalleryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

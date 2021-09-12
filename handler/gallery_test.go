@@ -66,10 +66,6 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("%v length is not 0", arts)
 	}
 
-	if _, err := http.Post("http://localhost:8080/accounts", "application/json", bytes.NewBufferString(`{"username":"bad", "password":"bad"}`)); err != nil {
-		t.Fatal(err)
-	}
-
 	if _, err := http.Post("http://localhost:8080/accounts", "application/json", bytes.NewBufferString(`{"username":"good", "password":"good"}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +91,7 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("the response (%v) does not have art with id %s", arts, art.Id)
 	}
 
-	if _, err := NewRequest(t, http.MethodPut, "http://localhost:8080/arts/"+art.Id, `{"title":"title2"}`, "bad", "bad"); err == nil {
+	if _, err := NewRequest(t, http.MethodPut, "http://localhost:8080/arts/"+art.Id, `{"title":"title2"}`, "good", "bad"); err == nil {
 		t.Fatal(err)
 	}
 
@@ -115,7 +111,7 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("the response (%v) does not have art with %s", arts, art.Title)
 	}
 
-	if _, err := NewRequest(t, http.MethodDelete, "http://localhost:8080/arts/"+art.Id, "", "bad", "bad"); err == nil {
+	if _, err := NewRequest(t, http.MethodDelete, "http://localhost:8080/arts/"+art.Id, "", "good", "bad"); err == nil {
 		t.Fatal(err)
 	}
 

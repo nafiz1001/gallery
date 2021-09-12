@@ -16,22 +16,22 @@ func (db *ArtDB) Init() error {
 	return nil
 }
 
-func (db *ArtDB) StoreArt(a dto.ArtDto) (*dto.ArtDto, error) {
-	a.Id = util.CreateId()
-	db.arts[a.Id] = &a
-	return &a, nil
+func (db *ArtDB) CreateArt(art dto.ArtDto) (*dto.ArtDto, error) {
+	art.Id = util.CreateId()
+	db.arts[art.Id] = &art
+	return &art, nil
 }
 
-func (db *ArtDB) RetrieveArt(id string) (*dto.ArtDto, error) {
+func (db *ArtDB) GetArt(id string) (*dto.ArtDto, error) {
 
-	if art, ok := db.arts[id]; ok {
-		return art, nil
-	} else {
+	if art, ok := db.arts[id]; !ok {
 		return nil, fmt.Errorf("could not find art with id %s", id)
+	} else {
+		return art, nil
 	}
 }
 
-func (db *ArtDB) RetrieveArts() ([]dto.ArtDto, error) {
+func (db *ArtDB) GetArts() ([]dto.ArtDto, error) {
 	arts := []dto.ArtDto{}
 
 	for id := range db.arts {
@@ -41,13 +41,13 @@ func (db *ArtDB) RetrieveArts() ([]dto.ArtDto, error) {
 	return arts, nil
 }
 
-func (db *ArtDB) UpdateArt(a dto.ArtDto) (*dto.ArtDto, error) {
-	if art, ok := db.arts[a.Id]; ok {
-		art.Quantity = a.Quantity
-		art.Title = a.Title
-		return db.arts[a.Id], nil
+func (db *ArtDB) UpdateArt(art dto.ArtDto) (*dto.ArtDto, error) {
+	if a, ok := db.arts[art.Id]; !ok {
+		return nil, fmt.Errorf("could not find art with id %s", art.Id)
 	} else {
-		return nil, fmt.Errorf("could not find art with id %s", a.Id)
+		a.Quantity = art.Quantity
+		a.Title = art.Title
+		return db.arts[a.Id], nil
 	}
 }
 

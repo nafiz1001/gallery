@@ -24,24 +24,24 @@ func (h AccountsHandler) PostAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var account dto.AccountDto
 
-	if err := json.NewDecoder(r.Body).Decode(&account); err == nil {
-		if acc, err := h.db.CreateAccount(account); err == nil {
-			json.NewEncoder(w).Encode(acc)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	} else {
+	if err := json.NewDecoder(r.Body).Decode(&account); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+	} else {
+		if acc, err := h.db.CreateAccount(account); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		} else {
+			json.NewEncoder(w).Encode(acc)
+		}
 	}
 }
 
 func (h AccountsHandler) GetAccount(w http.ResponseWriter, r *http.Request, username string) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if account, err := h.db.GetAccount(username); err == nil {
-		json.NewEncoder(w).Encode(account)
-	} else {
+	if account, err := h.db.GetAccount(username); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		json.NewEncoder(w).Encode(account)
 	}
 }
 

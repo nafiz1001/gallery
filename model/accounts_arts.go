@@ -19,9 +19,11 @@ func (db *AccountsArtsDB) Init(accountDB *AccountDB, artDB *ArtDB) error {
 	return nil
 }
 
-func (db *AccountsArtsDB) AddArt(account *dto.AccountDto, art *dto.ArtDto) (*dto.ArtDto, error) {
-	if acc, err := db.accountDB.GetAccount(account.Username); err == nil {
-		if a, err := db.artDB.StoreArt(*art); err != nil {
+func (db *AccountsArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.ArtDto, error) {
+	if acc, err := db.accountDB.GetAccount(account.Username); err != nil {
+		return nil, err
+	} else {
+		if a, err := db.artDB.CreateArt(art); err != nil {
 			return nil, err
 		} else {
 			if _, ok := db.authorIdToArts[acc.Id]; !ok {
@@ -32,36 +34,34 @@ func (db *AccountsArtsDB) AddArt(account *dto.AccountDto, art *dto.ArtDto) (*dto
 
 			return a, nil
 		}
-	} else {
-		return nil, err
 	}
 }
 
-func (db *AccountsArtsDB) IsAuthor(account *dto.AccountDto, id string) bool {
-	if acc, err := db.accountDB.GetAccount(account.Username); err == nil {
+func (db *AccountsArtsDB) IsAuthor(account dto.AccountDto, id string) bool {
+	if acc, err := db.accountDB.GetAccount(account.Username); err != nil {
+		return false
+	} else {
 		if author, ok := db.artIdToAuthor[id]; ok {
 			return acc.Id == author.Id
 		} else {
 			return false
 		}
-	} else {
-		return false
 	}
 }
 
-func (db *AccountsArtsDB) GetArtsByUsername(username string) ([]*dto.ArtDto, error) {
-	if account, err := db.accountDB.GetAccount(username); err == nil {
-		v := []*dto.ArtDto{}
+func (db *AccountsArtsDB) GetArtsByUsername(username string) ([]dto.ArtDto, error) {
+	v := []dto.ArtDto{}
 
+	if account, err := db.accountDB.GetAccount(username); err != nil {
+		return v, err
+	} else {
 		if arts, ok := db.authorIdToArts[account.Id]; ok {
 			for _, art := range arts {
-				v = append(v, art)
+				v = append(v, *art)
 			}
 		}
 
 		return v, nil
-	} else {
-		return nil, err
 	}
 }
 
