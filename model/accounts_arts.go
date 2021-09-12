@@ -1,20 +1,22 @@
 package model
 
 import (
+	"database/sql"
+
 	"github.com/nafiz1001/gallery-go/dto"
 )
 
 type AccountsArtsDB struct {
 	accountDB      *AccountDB
 	artDB          *ArtDB
-	authorIdToArts map[string]map[string]*dto.ArtDto
+	authorIdToArts map[int]map[string]*dto.ArtDto
 	artIdToAuthor  map[string]*dto.AccountDto
 }
 
-func (db *AccountsArtsDB) Init(accountDB *AccountDB, artDB *ArtDB) error {
+func (db *AccountsArtsDB) Init(sqlDB *sql.DB, accountDB *AccountDB, artDB *ArtDB) error {
 	db.accountDB = accountDB
 	db.artDB = artDB
-	db.authorIdToArts = map[string]map[string]*dto.ArtDto{}
+	db.authorIdToArts = map[int]map[string]*dto.ArtDto{}
 	db.artIdToAuthor = map[string]*dto.AccountDto{}
 	return nil
 }

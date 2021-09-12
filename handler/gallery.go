@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"regexp"
@@ -16,18 +17,18 @@ type GalleryHandler struct {
 	accountsHandler AccountsHandler
 }
 
-func (h *GalleryHandler) Init() error {
+func (h *GalleryHandler) Init(db *sql.DB) error {
 	h.artDB = &model.ArtDB{}
 	h.accountDB = &model.AccountDB{}
 	h.accountsArtsDB = &model.AccountsArtsDB{}
 
-	if err := h.artDB.Init(); err != nil {
+	if err := h.artDB.Init(db); err != nil {
 		return err
 	}
-	if err := h.accountDB.Init(); err != nil {
+	if err := h.accountDB.Init(db); err != nil {
 		return err
 	}
-	if err := h.accountsArtsDB.Init(h.accountDB, h.artDB); err != nil {
+	if err := h.accountsArtsDB.Init(db, h.accountDB, h.artDB); err != nil {
 		return err
 	}
 

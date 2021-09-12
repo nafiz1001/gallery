@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/nafiz1001/gallery-go/dto"
@@ -11,7 +12,7 @@ type ArtDB struct {
 	arts map[string]*dto.ArtDto
 }
 
-func (db *ArtDB) Init() error {
+func (db *ArtDB) Init(sqlDB *sql.DB) error {
 	db.arts = map[string]*dto.ArtDto{}
 	return nil
 }

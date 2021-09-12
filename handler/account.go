@@ -48,7 +48,7 @@ func (h AccountsHandler) GetAccount(w http.ResponseWriter, r *http.Request, user
 func (h AccountsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	regexs := map[string]*regexp.Regexp{
 		"/accounts":      regexp.MustCompile("^/accounts/*$"),
-		"/accounts/{id}": regexp.MustCompile("^/accounts/([^/]]+)/*$"),
+		"/accounts/{id}": regexp.MustCompile("^/accounts/([^/]+)/*$"),
 	}
 
 	handlers := map[string](func(w http.ResponseWriter, r *http.Request)){

@@ -2,14 +2,19 @@ package handler
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/nafiz1001/gallery-go/dto"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func GetArts(t *testing.T) []dto.ArtDto {
@@ -44,30 +49,79 @@ func NewRequest(t *testing.T, method string, url string, body string, username s
 	}
 }
 
-func TestGallery(t *testing.T) {
-	h := GalleryHandler{}
-	h.Init()
-
-	srv := &http.Server{
-		Handler: h,
-		Addr:    "localhost:8080",
-		// Good practice: enforce timeouts for servers you create!
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+func CheckError(t *testing.T, err error) {
+	if err != nil {
+		t.Fatal(err)
 	}
+}
 
-	go srv.ListenAndServe()
+func TestGallery(t *testing.T) {
+	defer os.Remove("./database.db")
+	go func() {
+		// postgresql://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]
+		// psqlconn, ok := os.LookupEnv("DATABASE_URL")
+		// if !ok {
+		// 	log.Fatal("expected env var DATABASE_URL")
+		// }
+
+		// // open database
+		// db, err := sql.Open("postgres", psqlconn)
+
+		db, err := sql.Open("sqlite3", "./database.db")
+		CheckError(t, err)
+
+		// close database
+		defer db.Close()
+
+		// check db
+		err = db.Ping()
+		CheckError(t, err)
+
+		fmt.Println("Connected!")
+
+		h := GalleryHandler{}
+		err = h.Init(db)
+		CheckError(t, err)
+
+		srv := &http.Server{
+			Handler: h,
+			Addr:    "localhost:8080",
+			// Good practice: enforce timeouts for servers you create!
+			WriteTimeout: 15 * time.Second,
+			ReadTimeout:  15 * time.Second,
+		}
+
+		log.Fatal(srv.ListenAndServe())
+	}()
 
 	time.Sleep(500 * time.Millisecond)
 
 	var art dto.ArtDto
+	var account dto.AccountDto
 
 	if arts := GetArts(t); len(arts) != 0 {
 		t.Fatalf("%v length is not 0", arts)
 	}
 
-	if _, err := http.Post("http://localhost:8080/accounts", "application/json", bytes.NewBufferString(`{"username":"good", "password":"good"}`)); err != nil {
+	if resp, err := http.Post("http://localhost:8080/accounts", "application/json", bytes.NewBufferString(`{"username":"good", "password":"good"}`)); err != nil {
 		t.Fatal(err)
+	} else {
+		if err := json.NewDecoder(resp.Body).Decode(&account); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if resp, err := http.Get("http://localhost:8080/accounts/" + account.Username); err != nil {
+		t.Fatal(err)
+	} else {
+		var tmp dto.AccountDto
+		if err := json.NewDecoder(resp.Body).Decode(&tmp); err != nil {
+			t.Fatal(err)
+		} else {
+			if tmp.Id != account.Id {
+				t.Fatalf("%d is not equal to %d", tmp.Id, account.Id)
+			}
+		}
 	}
 
 	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts", `{"title":"title"}`, "", ""); err == nil {
