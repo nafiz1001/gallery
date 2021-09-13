@@ -7,18 +7,27 @@ import (
 )
 
 type AccountsArtsDB struct {
-	accountDB      *AccountDB
-	artDB          *ArtDB
-	authorIdToArts map[int]map[int]*dto.ArtDto
-	artIdToAuthor  map[int]*dto.AccountDto
+	accountDB *AccountDB
+	artDB     *ArtDB
+	sqlDB     *sql.DB
 }
 
 func (db *AccountsArtsDB) Init(sqlDB *sql.DB, accountDB *AccountDB, artDB *ArtDB) error {
 	db.accountDB = accountDB
 	db.artDB = artDB
-	db.authorIdToArts = map[int]map[int]*dto.ArtDto{}
-	db.artIdToAuthor = map[int]*dto.AccountDto{}
-	return nil
+	db.sqlDB = sqlDB
+
+	_, err := sqlDB.Exec(
+		`CREATE TABLE account_arts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			art_id INTEGER NOT NULL,
+			account_id INTEGER NOT NULL,
+			FOREIGN KEY (art_id) REFERENCES arts (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+			FOREIGN KEY (account_id) REFERENCES accounts (id) ON UPDATE RESTRICT ON DELETE RESTRICT
+		  );`,
+	)
+
+	return err
 }
 
 func (db *AccountsArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.ArtDto, error) {
@@ -28,26 +37,22 @@ func (db *AccountsArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.A
 		if a, err := db.artDB.CreateArt(art); err != nil {
 			return nil, err
 		} else {
-			if _, ok := db.authorIdToArts[acc.Id]; !ok {
-				db.authorIdToArts[acc.Id] = map[int]*dto.ArtDto{}
+			if _, err := db.sqlDB.Exec("INSERT INTO account_arts (art_id, account_id) VALUES (?, ?)", a.Id, acc.Id); err != nil {
+				return nil, err
+			} else {
+				return a, nil
 			}
-			db.authorIdToArts[acc.Id][a.Id] = a
-			db.artIdToAuthor[a.Id] = acc
-
-			return a, nil
 		}
 	}
 }
 
-func (db *AccountsArtsDB) IsAuthor(account dto.AccountDto, id int) bool {
+func (db *AccountsArtsDB) IsAuthor(account dto.AccountDto, artId int) bool {
 	if acc, err := db.accountDB.GetAccount(account.Username); err != nil {
 		return false
 	} else {
-		if author, ok := db.artIdToAuthor[id]; ok {
-			return acc.Id == author.Id
-		} else {
-			return false
-		}
+		var tmpId int
+		err := db.sqlDB.QueryRow("SELECT id FROM account_arts WHERE art_id = ? AND account_id = ?", artId, acc.Id).Scan(&tmpId)
+		return err == nil
 	}
 }
 
@@ -57,26 +62,40 @@ func (db *AccountsArtsDB) GetArtsByUsername(username string) ([]dto.ArtDto, erro
 	if account, err := db.accountDB.GetAccount(username); err != nil {
 		return v, err
 	} else {
-		if arts, ok := db.authorIdToArts[account.Id]; ok {
-			for _, art := range arts {
-				v = append(v, *art)
+		if rows, err := db.sqlDB.Query("SELECT art_id FROM account_arts WHERE account_id = ?", account.Id); err != nil {
+			return []dto.ArtDto{}, err
+		} else {
+			defer rows.Close()
+			for rows.Next() {
+				var artId int
+				if err := rows.Scan(&artId); err != nil {
+					return []dto.ArtDto{}, err
+				} else {
+					if art, err := db.artDB.GetArt(artId); err != nil {
+						return []dto.ArtDto{}, err
+					} else {
+						v = append(v, *art)
+					}
+				}
 			}
 		}
-
-		return v, nil
 	}
+
+	return v, nil
 }
 
 func (db *AccountsArtsDB) DeleteArt(id int) (*dto.ArtDto, error) {
-
-	if art, err := db.artDB.DeleteArt(id); err != nil {
+	if art, err := db.artDB.GetArt(id); err != nil {
 		return nil, err
 	} else {
-		delete(db.artIdToAuthor, id)
-		for authorId := range db.authorIdToArts {
-			delete(db.authorIdToArts[authorId], id)
+		if _, err := db.sqlDB.Exec("DELETE FROM account_arts WHERE art_id = ?", art.Id); err != nil {
+			return nil, err
+		} else {
+			if art, err := db.artDB.DeleteArt(id); err != nil {
+				return nil, err
+			} else {
+				return art, nil
+			}
 		}
-
-		return art, nil
 	}
 }
