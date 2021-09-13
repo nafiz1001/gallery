@@ -29,7 +29,7 @@ func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, err
 	if a, _ := db.GetAccount(account.Username); a != nil {
 		return nil, fmt.Errorf("user '%s' already created", a.Username)
 	} else {
-		if res, err := db.sqlDB.Exec(`insert into "accounts"("username", "password") values($1, $2)`, account.Username, account.Password); err != nil {
+		if res, err := db.sqlDB.Exec(`INSERT INTO accounts (username, password) VALUES (?, ?)`, account.Username, account.Password); err != nil {
 			return nil, err
 		} else {
 			id, _ := res.LastInsertId()
@@ -42,7 +42,7 @@ func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, err
 func (db *AccountDB) GetAccount(username string) (*dto.AccountDto, error) {
 	var id int
 	var password string
-	if err := db.sqlDB.QueryRow(`SELECT id, username, password FROM accounts WHERE username = $1`, username).Scan(&id, &username, &password); err != nil {
+	if err := db.sqlDB.QueryRow(`SELECT id, username, password FROM accounts WHERE username = ?`, username).Scan(&id, &username, &password); err != nil {
 		return nil, err
 	} else {
 		return &dto.AccountDto{

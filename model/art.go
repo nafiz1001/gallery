@@ -25,7 +25,7 @@ func (db *ArtDB) Init(sqlDB *sql.DB) error {
 }
 
 func (db *ArtDB) CreateArt(art dto.ArtDto) (*dto.ArtDto, error) {
-	if res, err := db.sqlDB.Exec(`INSERT INTO "arts"("title", "quantity") values($1, $2)`, art.Title, art.Quantity); err != nil {
+	if res, err := db.sqlDB.Exec(`INSERT INTO arts (title, quantity) VALUES (?, ?)`, art.Title, art.Quantity); err != nil {
 		return nil, err
 	} else {
 		id, _ := res.LastInsertId()
@@ -37,7 +37,7 @@ func (db *ArtDB) CreateArt(art dto.ArtDto) (*dto.ArtDto, error) {
 func (db *ArtDB) GetArt(id int) (*dto.ArtDto, error) {
 	var title string
 	var quantity int
-	if err := db.sqlDB.QueryRow(`SELECT id, title, quantity FROM arts WHERE id = $1`, id).Scan(&id, &title, &quantity); err != nil {
+	if err := db.sqlDB.QueryRow(`SELECT id, title, quantity FROM arts WHERE id = ?`, id).Scan(&id, &title, &quantity); err != nil {
 		return nil, err
 	} else {
 		return &dto.ArtDto{
@@ -76,7 +76,7 @@ func (db *ArtDB) GetArts() ([]dto.ArtDto, error) {
 }
 
 func (db *ArtDB) UpdateArt(art dto.ArtDto) (*dto.ArtDto, error) {
-	if _, err := db.sqlDB.Exec(`UPDATE arts SET title=$1, quantity=$2 WHERE id = $3`, art.Title, art.Quantity, art.Id); err != nil {
+	if _, err := db.sqlDB.Exec(`UPDATE arts SET title=?, quantity=? WHERE id = ?`, art.Title, art.Quantity, art.Id); err != nil {
 		return nil, err
 	} else {
 		return &art, nil
@@ -87,7 +87,7 @@ func (db *ArtDB) DeleteArt(id int) (*dto.ArtDto, error) {
 	if art, err := db.GetArt(id); err != nil {
 		return nil, err
 	} else {
-		if _, err := db.sqlDB.Exec(`DELETE FROM arts WHERE id = $1`, art.Id); err != nil {
+		if _, err := db.sqlDB.Exec(`DELETE FROM arts WHERE id = ?`, art.Id); err != nil {
 			return nil, err
 		} else {
 			return art, nil

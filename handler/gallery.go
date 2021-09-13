@@ -12,28 +12,29 @@ import (
 type GalleryHandler struct {
 	artDB           *model.ArtDB
 	accountDB       *model.AccountDB
-	accountsArtsDB  *model.AccountsArtsDB
+	accountArtsDB   *model.AccountArtsDB
 	artsHandler     ArtsHandler
 	accountsHandler AccountsHandler
 }
 
 func (h *GalleryHandler) Init(db *sql.DB) error {
 	h.artDB = &model.ArtDB{}
-	h.accountDB = &model.AccountDB{}
-	h.accountsArtsDB = &model.AccountsArtsDB{}
-
 	if err := h.artDB.Init(db); err != nil {
 		return err
 	}
+
+	h.accountDB = &model.AccountDB{}
 	if err := h.accountDB.Init(db); err != nil {
 		return err
 	}
-	if err := h.accountsArtsDB.Init(db, h.accountDB, h.artDB); err != nil {
+
+	h.accountArtsDB = &model.AccountArtsDB{}
+	if err := h.accountArtsDB.Init(db, h.accountDB, h.artDB); err != nil {
 		return err
 	}
 
 	h.artsHandler = ArtsHandler{}
-	if err := h.artsHandler.Init(h.artDB, h.accountDB, h.accountsArtsDB); err != nil {
+	if err := h.artsHandler.Init(h.artDB, h.accountDB, h.accountArtsDB); err != nil {
 		return err
 	}
 

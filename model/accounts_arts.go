@@ -6,13 +6,13 @@ import (
 	"github.com/nafiz1001/gallery-go/dto"
 )
 
-type AccountsArtsDB struct {
+type AccountArtsDB struct {
 	accountDB *AccountDB
 	artDB     *ArtDB
 	sqlDB     *sql.DB
 }
 
-func (db *AccountsArtsDB) Init(sqlDB *sql.DB, accountDB *AccountDB, artDB *ArtDB) error {
+func (db *AccountArtsDB) Init(sqlDB *sql.DB, accountDB *AccountDB, artDB *ArtDB) error {
 	db.accountDB = accountDB
 	db.artDB = artDB
 	db.sqlDB = sqlDB
@@ -30,7 +30,7 @@ func (db *AccountsArtsDB) Init(sqlDB *sql.DB, accountDB *AccountDB, artDB *ArtDB
 	return err
 }
 
-func (db *AccountsArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.ArtDto, error) {
+func (db *AccountArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.ArtDto, error) {
 	if acc, err := db.accountDB.GetAccount(account.Username); err != nil {
 		return nil, err
 	} else {
@@ -46,7 +46,7 @@ func (db *AccountsArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.A
 	}
 }
 
-func (db *AccountsArtsDB) IsAuthor(account dto.AccountDto, artId int) bool {
+func (db *AccountArtsDB) IsAuthor(account dto.AccountDto, artId int) bool {
 	if acc, err := db.accountDB.GetAccount(account.Username); err != nil {
 		return false
 	} else {
@@ -56,7 +56,7 @@ func (db *AccountsArtsDB) IsAuthor(account dto.AccountDto, artId int) bool {
 	}
 }
 
-func (db *AccountsArtsDB) GetArtsByUsername(username string) ([]dto.ArtDto, error) {
+func (db *AccountArtsDB) GetArtsByUsername(username string) ([]dto.ArtDto, error) {
 	v := []dto.ArtDto{}
 
 	if account, err := db.accountDB.GetAccount(username); err != nil {
@@ -84,7 +84,7 @@ func (db *AccountsArtsDB) GetArtsByUsername(username string) ([]dto.ArtDto, erro
 	return v, nil
 }
 
-func (db *AccountsArtsDB) DeleteArt(id int) (*dto.ArtDto, error) {
+func (db *AccountArtsDB) DeleteArt(id int) (*dto.ArtDto, error) {
 	if art, err := db.artDB.GetArt(id); err != nil {
 		return nil, err
 	} else {

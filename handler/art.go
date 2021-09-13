@@ -13,15 +13,15 @@ import (
 )
 
 type ArtsHandler struct {
-	artDB          *model.ArtDB
-	accountDB      *model.AccountDB
-	accountsArtsDB *model.AccountsArtsDB
+	artDB         *model.ArtDB
+	accountDB     *model.AccountDB
+	accountArtsDB *model.AccountArtsDB
 }
 
-func (h *ArtsHandler) Init(artDB *model.ArtDB, accountDB *model.AccountDB, accountsArtsDB *model.AccountsArtsDB) error {
+func (h *ArtsHandler) Init(artDB *model.ArtDB, accountDB *model.AccountDB, accountArtsDB *model.AccountArtsDB) error {
 	h.artDB = artDB
 	h.accountDB = accountDB
-	h.accountsArtsDB = accountsArtsDB
+	h.accountArtsDB = accountArtsDB
 
 	return nil
 }
@@ -34,7 +34,7 @@ func (h ArtsHandler) PostArt(w http.ResponseWriter, r *http.Request, account dto
 	if err := json.NewDecoder(r.Body).Decode(&art); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 	} else {
-		if art, err := h.accountsArtsDB.AddArt(account, art); err != nil {
+		if art, err := h.accountArtsDB.AddArt(account, art); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		} else {
 			json.NewEncoder(w).Encode(art)
@@ -74,7 +74,7 @@ func (h ArtsHandler) PutArt(w http.ResponseWriter, r *http.Request, art *dto.Art
 
 func (h ArtsHandler) DeleteArt(w http.ResponseWriter, r *http.Request, id int) {
 	w.Header().Set("Content-Type", "application/json")
-	if art, err := h.accountsArtsDB.DeleteArt(id); err != nil {
+	if art, err := h.accountArtsDB.DeleteArt(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		json.NewEncoder(w).Encode(art)
@@ -99,7 +99,7 @@ func (h ArtsHandler) AccountAuth(w http.ResponseWriter, r *http.Request, f func(
 
 func (h ArtsHandler) AuthorAuth(w http.ResponseWriter, r *http.Request, id int, f func(dto.AccountDto)) {
 	h.AccountAuth(w, r, func(account dto.AccountDto) {
-		if !h.accountsArtsDB.IsAuthor(account, id) {
+		if !h.accountArtsDB.IsAuthor(account, id) {
 			http.Error(w, fmt.Sprintf("art does not belong to '%s'", account.Username), http.StatusUnauthorized)
 		} else {
 			f(account)
