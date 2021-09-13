@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 
 	"github.com/nafiz1001/gallery-go/dto"
 	"github.com/nafiz1001/gallery-go/model"
@@ -51,7 +52,7 @@ func (h ArtsHandler) GetArts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h ArtsHandler) GetArt(w http.ResponseWriter, r *http.Request, id string) {
+func (h ArtsHandler) GetArt(w http.ResponseWriter, r *http.Request, id int) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if arts, err := h.artDB.GetArt(id); err != nil {
@@ -71,7 +72,7 @@ func (h ArtsHandler) PutArt(w http.ResponseWriter, r *http.Request, art *dto.Art
 	}
 }
 
-func (h ArtsHandler) DeleteArt(w http.ResponseWriter, r *http.Request, id string) {
+func (h ArtsHandler) DeleteArt(w http.ResponseWriter, r *http.Request, id int) {
 	w.Header().Set("Content-Type", "application/json")
 	if art, err := h.accountsArtsDB.DeleteArt(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,7 +97,7 @@ func (h ArtsHandler) AccountAuth(w http.ResponseWriter, r *http.Request, f func(
 	}
 }
 
-func (h ArtsHandler) AuthorAuth(w http.ResponseWriter, r *http.Request, id string, f func(dto.AccountDto)) {
+func (h ArtsHandler) AuthorAuth(w http.ResponseWriter, r *http.Request, id int, f func(dto.AccountDto)) {
 	h.AccountAuth(w, r, func(account dto.AccountDto) {
 		if !h.accountsArtsDB.IsAuthor(account, id) {
 			http.Error(w, fmt.Sprintf("art does not belong to '%s'", account.Username), http.StatusUnauthorized)
@@ -109,7 +110,7 @@ func (h ArtsHandler) AuthorAuth(w http.ResponseWriter, r *http.Request, id strin
 func (h ArtsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	regexs := map[string]*regexp.Regexp{
 		"/arts":      regexp.MustCompile("^/arts/*$"),
-		"/arts/{id}": regexp.MustCompile("^/arts/([^/]+)/*$"),
+		"/arts/{id}": regexp.MustCompile("^/arts/([0-9]+)/*$"),
 	}
 
 	handlers := map[string](func(w http.ResponseWriter, r *http.Request)){
@@ -128,25 +129,29 @@ func (h ArtsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"/arts/{id}": func(w http.ResponseWriter, r *http.Request) {
 			match := regexs["/arts/{id}"].FindStringSubmatch(r.RequestURI)
 			if len(match) > 0 {
-				switch r.Method {
-				case http.MethodGet:
-					h.GetArt(w, r, match[1])
-				case http.MethodPut:
-					h.AuthorAuth(w, r, match[1], func(account dto.AccountDto) {
-						var art dto.ArtDto
-						if err := json.NewDecoder(r.Body).Decode(&art); err != nil {
-							http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-						} else {
-							art.Id = match[1]
-							h.PutArt(w, r, &art)
-						}
-					})
-				case http.MethodDelete:
-					h.AuthorAuth(w, r, match[1], func(account dto.AccountDto) {
-						h.DeleteArt(w, r, match[1])
-					})
-				default:
-					http.Error(w, fmt.Sprintf("%s method not supported for %s", r.Method, r.RequestURI), http.StatusMethodNotAllowed)
+				if id, err := strconv.ParseInt(match[1], 10, 32); err != nil {
+					http.NotFound(w, r)
+				} else {
+					switch r.Method {
+					case http.MethodGet:
+						h.GetArt(w, r, int(id))
+					case http.MethodPut:
+						h.AuthorAuth(w, r, int(id), func(account dto.AccountDto) {
+							var art dto.ArtDto
+							if err := json.NewDecoder(r.Body).Decode(&art); err != nil {
+								http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+							} else {
+								art.Id = int(id)
+								h.PutArt(w, r, &art)
+							}
+						})
+					case http.MethodDelete:
+						h.AuthorAuth(w, r, int(id), func(account dto.AccountDto) {
+							h.DeleteArt(w, r, int(id))
+						})
+					default:
+						http.Error(w, fmt.Sprintf("%s method not supported for %s", r.Method, r.RequestURI), http.StatusMethodNotAllowed)
+					}
 				}
 			}
 		},

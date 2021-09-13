@@ -9,15 +9,15 @@ import (
 type AccountsArtsDB struct {
 	accountDB      *AccountDB
 	artDB          *ArtDB
-	authorIdToArts map[int]map[string]*dto.ArtDto
-	artIdToAuthor  map[string]*dto.AccountDto
+	authorIdToArts map[int]map[int]*dto.ArtDto
+	artIdToAuthor  map[int]*dto.AccountDto
 }
 
 func (db *AccountsArtsDB) Init(sqlDB *sql.DB, accountDB *AccountDB, artDB *ArtDB) error {
 	db.accountDB = accountDB
 	db.artDB = artDB
-	db.authorIdToArts = map[int]map[string]*dto.ArtDto{}
-	db.artIdToAuthor = map[string]*dto.AccountDto{}
+	db.authorIdToArts = map[int]map[int]*dto.ArtDto{}
+	db.artIdToAuthor = map[int]*dto.AccountDto{}
 	return nil
 }
 
@@ -29,7 +29,7 @@ func (db *AccountsArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.A
 			return nil, err
 		} else {
 			if _, ok := db.authorIdToArts[acc.Id]; !ok {
-				db.authorIdToArts[acc.Id] = map[string]*dto.ArtDto{}
+				db.authorIdToArts[acc.Id] = map[int]*dto.ArtDto{}
 			}
 			db.authorIdToArts[acc.Id][a.Id] = a
 			db.artIdToAuthor[a.Id] = acc
@@ -39,7 +39,7 @@ func (db *AccountsArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.A
 	}
 }
 
-func (db *AccountsArtsDB) IsAuthor(account dto.AccountDto, id string) bool {
+func (db *AccountsArtsDB) IsAuthor(account dto.AccountDto, id int) bool {
 	if acc, err := db.accountDB.GetAccount(account.Username); err != nil {
 		return false
 	} else {
@@ -67,7 +67,7 @@ func (db *AccountsArtsDB) GetArtsByUsername(username string) ([]dto.ArtDto, erro
 	}
 }
 
-func (db *AccountsArtsDB) DeleteArt(id string) (*dto.ArtDto, error) {
+func (db *AccountsArtsDB) DeleteArt(id int) (*dto.ArtDto, error) {
 
 	if art, err := db.artDB.DeleteArt(id); err != nil {
 		return nil, err

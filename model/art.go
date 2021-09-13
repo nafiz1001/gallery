@@ -2,61 +2,95 @@ package model
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/nafiz1001/gallery-go/dto"
-	"github.com/nafiz1001/gallery-go/util"
 )
 
 type ArtDB struct {
-	arts map[string]*dto.ArtDto
+	sqlDB *sql.DB
 }
 
 func (db *ArtDB) Init(sqlDB *sql.DB) error {
-	db.arts = map[string]*dto.ArtDto{}
-	return nil
+	db.sqlDB = sqlDB
+
+	_, err := sqlDB.Exec(
+		`CREATE TABLE arts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title VARCHAR(255) NOT NULL,
+			quantity INTEGER NOT NULL
+		  );`,
+	)
+
+	return err
 }
 
 func (db *ArtDB) CreateArt(art dto.ArtDto) (*dto.ArtDto, error) {
-	art.Id = util.CreateId()
-	db.arts[art.Id] = &art
-	return &art, nil
+	if res, err := db.sqlDB.Exec(`INSERT INTO "arts"("title", "quantity") values($1, $2)`, art.Title, art.Quantity); err != nil {
+		return nil, err
+	} else {
+		id, _ := res.LastInsertId()
+		art.Id = int(id)
+		return &art, nil
+	}
 }
 
-func (db *ArtDB) GetArt(id string) (*dto.ArtDto, error) {
-
-	if art, ok := db.arts[id]; !ok {
-		return nil, fmt.Errorf("could not find art with id %s", id)
+func (db *ArtDB) GetArt(id int) (*dto.ArtDto, error) {
+	var title string
+	var quantity int
+	if err := db.sqlDB.QueryRow(`SELECT id, title, quantity FROM arts WHERE id = $1`, id).Scan(&id, &title, &quantity); err != nil {
+		return nil, err
 	} else {
-		return art, nil
+		return &dto.ArtDto{
+			Id:       id,
+			Title:    title,
+			Quantity: quantity,
+		}, nil
 	}
 }
 
 func (db *ArtDB) GetArts() ([]dto.ArtDto, error) {
 	arts := []dto.ArtDto{}
 
-	for id := range db.arts {
-		arts = append(arts, *db.arts[id])
+	if rows, err := db.sqlDB.Query(`SELECT id, title, quantity FROM arts`); err != nil {
+		return nil, err
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			var id int
+			var title string
+			var quantity int
+
+			if err := rows.Scan(&id, &title, &quantity); err != nil {
+				return nil, err
+			} else {
+				arts = append(arts, dto.ArtDto{
+					Id:       id,
+					Title:    title,
+					Quantity: quantity,
+				})
+			}
+		}
 	}
 
 	return arts, nil
 }
 
 func (db *ArtDB) UpdateArt(art dto.ArtDto) (*dto.ArtDto, error) {
-	if a, ok := db.arts[art.Id]; !ok {
-		return nil, fmt.Errorf("could not find art with id %s", art.Id)
+	if _, err := db.sqlDB.Exec(`UPDATE arts SET title=$1, quantity=$2 WHERE id = $3`, art.Title, art.Quantity, art.Id); err != nil {
+		return nil, err
 	} else {
-		a.Quantity = art.Quantity
-		a.Title = art.Title
-		return db.arts[a.Id], nil
+		return &art, nil
 	}
 }
 
-func (db *ArtDB) DeleteArt(id string) (*dto.ArtDto, error) {
-	if art, ok := db.arts[id]; !ok {
-		return nil, fmt.Errorf("could not find art with id %s", id)
+func (db *ArtDB) DeleteArt(id int) (*dto.ArtDto, error) {
+	if art, err := db.GetArt(id); err != nil {
+		return nil, err
 	} else {
-		delete(db.arts, art.Id)
-		return art, nil
+		if _, err := db.sqlDB.Exec(`DELETE FROM arts WHERE id = $1`, art.Id); err != nil {
+			return nil, err
+		} else {
+			return art, nil
+		}
 	}
 }

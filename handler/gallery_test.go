@@ -142,14 +142,14 @@ func TestGallery(t *testing.T) {
 	}
 
 	if arts := GetArts(t); arts[0].Id != art.Id {
-		t.Fatalf("the response (%v) does not have art with id %s", arts, art.Id)
+		t.Fatalf("the response (%v) does not have art with id %d", arts, art.Id)
 	}
 
-	if _, err := NewRequest(t, http.MethodPut, "http://localhost:8080/arts/"+art.Id, `{"title":"title2"}`, "good", "bad"); err == nil {
+	if _, err := NewRequest(t, http.MethodPut, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), `{"title":"title2"}`, "good", "bad"); err == nil {
 		t.Fatal(err)
 	}
 
-	if resp, err := NewRequest(t, http.MethodPut, "http://localhost:8080/arts/"+art.Id, `{"title":"title2"}`, "good", "good"); err != nil {
+	if resp, err := NewRequest(t, http.MethodPut, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), `{"title":"title2"}`, "good", "good"); err != nil {
 		t.Fatalf("%s", err)
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
@@ -165,7 +165,7 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("the response (%v) does not have art with %s", arts, art.Title)
 	}
 
-	if _, err := NewRequest(t, http.MethodDelete, "http://localhost:8080/arts/"+art.Id, "", "good", "bad"); err == nil {
+	if _, err := NewRequest(t, http.MethodDelete, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), "", "good", "bad"); err == nil {
 		t.Fatal(err)
 	}
 
@@ -173,7 +173,7 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("%v length is not 1", arts)
 	}
 
-	if resp, err := NewRequest(t, http.MethodDelete, "http://localhost:8080/arts/"+art.Id, "", "good", "good"); err != nil {
+	if resp, err := NewRequest(t, http.MethodDelete, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), "", "good", "good"); err != nil {
 		t.Fatal(err)
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
