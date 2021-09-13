@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -56,7 +55,6 @@ func CheckError(t *testing.T, err error) {
 }
 
 func TestGallery(t *testing.T) {
-	defer os.Remove("./database.db")
 	go func() {
 		// postgresql://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]
 		// psqlconn, ok := os.LookupEnv("DATABASE_URL")
@@ -67,7 +65,9 @@ func TestGallery(t *testing.T) {
 		// // open database
 		// db, err := sql.Open("postgres", psqlconn)
 
-		db, err := sql.Open("sqlite3", "./database.db")
+		db, err := sql.Open("sqlite3", "file::memory:?cache=shared&_foreign_keys=true")
+		db.SetMaxIdleConns(2)
+		db.SetConnMaxLifetime(-1)
 		CheckError(t, err)
 
 		// close database
@@ -103,15 +103,19 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("%v length is not 0", arts)
 	}
 
-	if resp, err := http.Post("http://localhost:8080/accounts", "application/json", bytes.NewBufferString(`{"username":"good", "password":"good"}`)); err != nil {
+	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/accounts", `{"username":"good", "password":"good"}`, "", ""); err != nil {
 		t.Fatal(err)
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&account); err != nil {
 			t.Fatal(err)
+		} else {
+			if account.Username != "good" {
+				t.Fatalf("%s is not equal to 'good'", account.Username)
+			}
 		}
 	}
 
-	if resp, err := http.Get("http://localhost:8080/accounts/" + account.Username); err != nil {
+	if resp, err := NewRequest(t, http.MethodGet, "http://localhost:8080/accounts/"+account.Username, "", "", ""); err != nil {
 		t.Fatal(err)
 	} else {
 		var tmp dto.AccountDto
