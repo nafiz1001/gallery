@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -11,12 +10,11 @@ import (
 type GalleryHandler struct {
 	artDB           *model.ArtDB
 	accountDB       *model.AccountDB
-	accountArtsDB   *model.AccountArtsDB
 	artsHandler     ArtsHandler
 	accountsHandler AccountsHandler
 }
 
-func (h *GalleryHandler) Init(db *sql.DB) error {
+func (h *GalleryHandler) Init(db *model.DB) error {
 	h.artDB = &model.ArtDB{}
 	if err := h.artDB.Init(db); err != nil {
 		return err
@@ -27,13 +25,8 @@ func (h *GalleryHandler) Init(db *sql.DB) error {
 		return err
 	}
 
-	h.accountArtsDB = &model.AccountArtsDB{}
-	if err := h.accountArtsDB.Init(db, h.accountDB, h.artDB); err != nil {
-		return err
-	}
-
 	h.artsHandler = ArtsHandler{}
-	if err := h.artsHandler.Init(h.artDB, h.accountDB, h.accountArtsDB); err != nil {
+	if err := h.artsHandler.Init(h.artDB, h.accountDB); err != nil {
 		return err
 	}
 

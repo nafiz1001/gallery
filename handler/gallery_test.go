@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +11,9 @@ import (
 	"time"
 
 	"github.com/nafiz1001/gallery-go/dto"
+	"github.com/nafiz1001/gallery-go/model"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -65,22 +67,27 @@ func TestGallery(t *testing.T) {
 		// // open database
 		// db, err := sql.Open("postgres", psqlconn)
 
-		db, err := sql.Open("sqlite3", "file::memory:?cache=shared&_foreign_keys=true")
-		db.SetMaxIdleConns(2)
-		db.SetConnMaxLifetime(-1)
+		// db, err := sql.Open("sqlite3", "file::memory:?cache=shared&_foreign_keys=true")
+		// db.SetMaxIdleConns(2)
+		// db.SetConnMaxLifetime(-1)
+		// CheckError(t, err)
+
+		// // close database
+		// defer db.Close()
+
+		// // check db
+		// err = db.Ping()
+		// CheckError(t, err)
+
+		// fmt.Println("Connected!")
+
+		gormDB, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 		CheckError(t, err)
-
-		// close database
-		defer db.Close()
-
-		// check db
-		err = db.Ping()
-		CheckError(t, err)
-
-		fmt.Println("Connected!")
 
 		h := GalleryHandler{}
-		err = h.Init(db)
+		err = h.Init(&model.DB{
+			GormDB: gormDB,
+		})
 		CheckError(t, err)
 
 		srv := &http.Server{
