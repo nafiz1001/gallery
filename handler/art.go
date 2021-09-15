@@ -45,7 +45,7 @@ func (h ArtsHandler) PostArt(w http.ResponseWriter, r *http.Request, account dto
 func (h ArtsHandler) GetArts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if arts, err := h.artDB.GetArts(); err != nil {
+	if arts, err := h.accountArtsDB.GetArts(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		json.NewEncoder(w).Encode(arts)

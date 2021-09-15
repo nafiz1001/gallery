@@ -40,6 +40,7 @@ func (db *AccountArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.Ar
 			if _, err := db.sqlDB.Exec("INSERT INTO account_arts (art_id, account_id) VALUES (?, ?)", a.Id, acc.Id); err != nil {
 				return nil, err
 			} else {
+				a.AuthorId = acc.Id
 				return a, nil
 			}
 		}
@@ -56,21 +57,48 @@ func (db *AccountArtsDB) IsAuthor(account dto.AccountDto, artId int) bool {
 	}
 }
 
-func (db *AccountArtsDB) GetArtsByAccountId(id int) ([]dto.ArtDto, error) {
+func (db *AccountArtsDB) GetArts() ([]dto.ArtDto, error) {
 	v := []dto.ArtDto{}
 
-	if rows, err := db.sqlDB.Query("SELECT art_id FROM account_arts WHERE account_id = ?", id); err != nil {
+	if rows, err := db.sqlDB.Query("SELECT art_id, account_id FROM account_arts"); err != nil {
 		return []dto.ArtDto{}, err
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var artId int
-			if err := rows.Scan(&artId); err != nil {
+			var accountId int
+			if err := rows.Scan(&artId, &accountId); err != nil {
 				return []dto.ArtDto{}, err
 			} else {
 				if art, err := db.artDB.GetArt(artId); err != nil {
 					return []dto.ArtDto{}, err
 				} else {
+					art.AuthorId = accountId
+					v = append(v, *art)
+				}
+			}
+		}
+	}
+
+	return v, nil
+}
+
+func (db *AccountArtsDB) GetArtsByAccountId(accountId int) ([]dto.ArtDto, error) {
+	v := []dto.ArtDto{}
+
+	if rows, err := db.sqlDB.Query("SELECT art_id FROM account_arts WHERE account_id = ?", accountId); err != nil {
+		return []dto.ArtDto{}, err
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			var artId int
+			if err := rows.Scan(&artId, &accountId); err != nil {
+				return []dto.ArtDto{}, err
+			} else {
+				if art, err := db.artDB.GetArt(artId); err != nil {
+					return []dto.ArtDto{}, err
+				} else {
+					art.AuthorId = accountId
 					v = append(v, *art)
 				}
 			}

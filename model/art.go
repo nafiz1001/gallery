@@ -48,33 +48,6 @@ func (db *ArtDB) GetArt(id int) (*dto.ArtDto, error) {
 	}
 }
 
-func (db *ArtDB) GetArts() ([]dto.ArtDto, error) {
-	arts := []dto.ArtDto{}
-
-	if rows, err := db.sqlDB.Query(`SELECT id, title, quantity FROM arts`); err != nil {
-		return nil, err
-	} else {
-		defer rows.Close()
-		for rows.Next() {
-			var id int
-			var title string
-			var quantity int
-
-			if err := rows.Scan(&id, &title, &quantity); err != nil {
-				return nil, err
-			} else {
-				arts = append(arts, dto.ArtDto{
-					Id:       id,
-					Title:    title,
-					Quantity: quantity,
-				})
-			}
-		}
-	}
-
-	return arts, nil
-}
-
 func (db *ArtDB) UpdateArt(art dto.ArtDto) (*dto.ArtDto, error) {
 	if _, err := db.sqlDB.Exec(`UPDATE arts SET title=?, quantity=? WHERE id = ?`, art.Title, art.Quantity, art.Id); err != nil {
 		return nil, err

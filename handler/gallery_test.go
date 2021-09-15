@@ -142,11 +142,16 @@ func TestGallery(t *testing.T) {
 			if art.Title != "title" {
 				t.Fatalf("the title of response (%v) is not equal to 'title'", art)
 			}
+			if art.AuthorId != account.Id {
+				t.Fatalf("the authorId of response (%v) is not equal to '%d'", art, account.Id)
+			}
 		}
 	}
 
 	if arts := GetArts(t); arts[0].Id != art.Id {
 		t.Fatalf("the response (%v) does not have art with id %d", arts, art.Id)
+	} else if arts[0].AuthorId != account.Id {
+		t.Fatalf("the authorId of response (%v) is not equal to '%d'", arts[0].AuthorId, account.Id)
 	}
 
 	if _, err := NewRequest(t, http.MethodPut, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), `{"title":"title2"}`, "good", "bad"); err == nil {
