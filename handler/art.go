@@ -12,15 +12,13 @@ import (
 )
 
 type ArtsHandler struct {
-	artDB         *model.ArtDB
-	accountDB     *model.AccountDB
-	accountArtsDB *model.AccountArtsDB
+	artDB     *model.ArtDB
+	accountDB *model.AccountDB
 }
 
-func (h *ArtsHandler) Init(artDB *model.ArtDB, accountDB *model.AccountDB, accountArtsDB *model.AccountArtsDB) error {
+func (h *ArtsHandler) Init(artDB *model.ArtDB, accountDB *model.AccountDB) error {
 	h.artDB = artDB
 	h.accountDB = accountDB
-	h.accountArtsDB = accountArtsDB
 
 	return nil
 }
@@ -31,7 +29,7 @@ func (h ArtsHandler) PostArt(w http.ResponseWriter, r *http.Request, account dto
 	if art, err := dto.DecodeArt(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 	} else {
-		if art, err := h.accountArtsDB.AddArt(account, *art); err != nil {
+		if art, err := h.artDB.CreateArt(*art, account); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		} else {
 			json.NewEncoder(w).Encode(art)
@@ -42,7 +40,7 @@ func (h ArtsHandler) PostArt(w http.ResponseWriter, r *http.Request, account dto
 func (h ArtsHandler) GetArts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if arts, err := h.accountArtsDB.GetArts(); err != nil {
+	if arts, err := h.artDB.GetArts(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		json.NewEncoder(w).Encode(arts)
@@ -71,7 +69,7 @@ func (h ArtsHandler) PutArt(w http.ResponseWriter, r *http.Request, art *dto.Art
 
 func (h ArtsHandler) DeleteArt(w http.ResponseWriter, r *http.Request, id int) {
 	w.Header().Set("Content-Type", "application/json")
-	if art, err := h.accountArtsDB.DeleteArt(id); err != nil {
+	if art, err := h.artDB.DeleteArt(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		json.NewEncoder(w).Encode(art)
@@ -94,13 +92,17 @@ func (h ArtsHandler) AccountAuth(w http.ResponseWriter, r *http.Request, f func(
 	}
 }
 
-func (h ArtsHandler) AuthorAuth(w http.ResponseWriter, r *http.Request, id int, f func(dto.AccountDto)) {
+func (h ArtsHandler) AuthorAuth(w http.ResponseWriter, r *http.Request, id int, f func(dto.AccountDto, dto.ArtDto)) {
 	h.AccountAuth(w, r, func(account dto.AccountDto) {
-		if !h.accountArtsDB.IsAuthor(account, id) {
-			http.Error(w, fmt.Sprintf("art does not belong to '%s'", account.Username), http.StatusUnauthorized)
+
+		if art, err := h.artDB.GetArt(id); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		} else if art.AuthorId != account.Id {
+			http.Error(w, fmt.Sprintf("art #%d does not belong to '%s'", art.Id, account.Username), http.StatusUnauthorized)
 		} else {
-			f(account)
+			f(account, *art)
 		}
+
 	})
 }
 
@@ -123,8 +125,9 @@ func (h ArtsHandler) ArtByIdFuncHandler(w http.ResponseWriter, r *http.Request) 
 	case http.MethodGet:
 		h.GetArt(w, r, int(id))
 	case http.MethodPut:
-		h.AuthorAuth(w, r, int(id), func(account dto.AccountDto) {
-			if art, err := dto.DecodeArt(r.Body); err != nil {
+		h.AuthorAuth(w, r, int(id), func(account dto.AccountDto, _ dto.ArtDto) {
+			art, err := dto.DecodeArt(r.Body)
+			if err != nil {
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			} else {
 				art.Id = int(id)
@@ -132,7 +135,7 @@ func (h ArtsHandler) ArtByIdFuncHandler(w http.ResponseWriter, r *http.Request) 
 			}
 		})
 	case http.MethodDelete:
-		h.AuthorAuth(w, r, int(id), func(account dto.AccountDto) {
+		h.AuthorAuth(w, r, int(id), func(account dto.AccountDto, _ dto.ArtDto) {
 			h.DeleteArt(w, r, int(id))
 		})
 	}

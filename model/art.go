@@ -1,69 +1,100 @@
 package model
 
 import (
-	"database/sql"
-
 	"github.com/nafiz1001/gallery-go/dto"
+	"gorm.io/gorm"
 )
 
 type ArtDB struct {
-	sqlDB *sql.DB
+	db *gorm.DB
 }
 
-func (db *ArtDB) Init(sqlDB *sql.DB) error {
-	db.sqlDB = sqlDB
-
-	_, err := sqlDB.Exec(
-		`CREATE TABLE arts (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			title VARCHAR(255) NOT NULL,
-			quantity INTEGER NOT NULL
-		  );`,
-	)
-
-	return err
+type Art struct {
+	gorm.Model
+	Quantity  int
+	Title     string
+	AccountID uint
 }
 
-func (db *ArtDB) CreateArt(art dto.ArtDto) (*dto.ArtDto, error) {
-	if res, err := db.sqlDB.Exec(`INSERT INTO arts (title, quantity) VALUES (?, ?)`, art.Title, art.Quantity); err != nil {
-		return nil, err
-	} else {
-		id, _ := res.LastInsertId()
-		art.Id = int(id)
-		return &art, nil
+func (model *Art) fromDto(data dto.ArtDto) {
+	model.ID = uint(data.Id)
+	model.Quantity = data.Quantity
+	model.Title = data.Title
+}
+
+func (model *Art) toDto() *dto.ArtDto {
+	return &dto.ArtDto{
+		Id:       int(model.ID),
+		Quantity: model.Quantity,
+		Title:    model.Title,
+		AuthorId: int(model.AccountID),
 	}
+}
+
+func (db *ArtDB) Init(database *DB) error {
+	db.db = database.GormDB
+	return db.db.AutoMigrate(&Art{})
+}
+
+func (db *ArtDB) CreateArt(art dto.ArtDto, account dto.AccountDto) (*dto.ArtDto, error) {
+	var artModel Art
+	artModel.fromDto(art)
+
+	var accModel Account
+	accModel.fromDto(account)
+
+	if err := db.db.Create(&artModel).Error; err != nil {
+		return nil, err
+	}
+
+	err := db.db.Model(&accModel).Association("Arts").Append(&artModel)
+	return artModel.toDto(), err
 }
 
 func (db *ArtDB) GetArt(id int) (*dto.ArtDto, error) {
-	var title string
-	var quantity int
-	if err := db.sqlDB.QueryRow(`SELECT id, title, quantity FROM arts WHERE id = ?`, id).Scan(&id, &title, &quantity); err != nil {
-		return nil, err
-	} else {
-		return &dto.ArtDto{
-			Id:       id,
-			Title:    title,
-			Quantity: quantity,
-		}, nil
+	var model Art
+	err := db.db.First(&model, id).Error
+	return model.toDto(), err
+}
+
+func (db *ArtDB) GetArts() ([]dto.ArtDto, error) {
+	var models []Art
+
+	err := db.db.Find(&models).Error
+	if err != nil {
+		return []dto.ArtDto{}, err
 	}
+
+	arts := []dto.ArtDto{}
+	for _, m := range models {
+		arts = append(arts, *m.toDto())
+	}
+
+	return arts, nil
 }
 
 func (db *ArtDB) UpdateArt(art dto.ArtDto) (*dto.ArtDto, error) {
-	if _, err := db.sqlDB.Exec(`UPDATE arts SET title=?, quantity=? WHERE id = ?`, art.Title, art.Quantity, art.Id); err != nil {
-		return nil, err
-	} else {
-		return &art, nil
-	}
+	var model Art
+	model.fromDto(art)
+	err := db.db.Model(&model).Omit("account_id").Updates(&model).Error
+	return model.toDto(), err
 }
 
 func (db *ArtDB) DeleteArt(id int) (*dto.ArtDto, error) {
-	if art, err := db.GetArt(id); err != nil {
+	var artModel Art
+	if err := db.db.First(&artModel, id).Error; err != nil {
 		return nil, err
-	} else {
-		if _, err := db.sqlDB.Exec(`DELETE FROM arts WHERE id = ?`, art.Id); err != nil {
-			return nil, err
-		} else {
-			return art, nil
-		}
 	}
+
+	var accModel Account
+	if err := db.db.First(&accModel, artModel.AccountID).Error; err != nil {
+		return nil, err
+	}
+
+	if err := db.db.Model(&accModel).Association("Arts").Delete(&artModel); err != nil {
+		return nil, err
+	}
+
+	err := db.db.Delete(&artModel, id).Error
+	return artModel.toDto(), err
 }
