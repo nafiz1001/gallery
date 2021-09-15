@@ -28,12 +28,10 @@ func (h *ArtsHandler) Init(artDB *model.ArtDB, accountDB *model.AccountDB, accou
 func (h ArtsHandler) PostArt(w http.ResponseWriter, r *http.Request, account dto.AccountDto) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var art dto.ArtDto
-
-	if err := json.NewDecoder(r.Body).Decode(&art); err != nil {
+	if art, err := dto.DecodeArt(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 	} else {
-		if art, err := h.accountArtsDB.AddArt(account, art); err != nil {
+		if art, err := h.accountArtsDB.AddArt(account, *art); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		} else {
 			json.NewEncoder(w).Encode(art)
@@ -126,12 +124,11 @@ func (h ArtsHandler) ArtByIdFuncHandler(w http.ResponseWriter, r *http.Request) 
 		h.GetArt(w, r, int(id))
 	case http.MethodPut:
 		h.AuthorAuth(w, r, int(id), func(account dto.AccountDto) {
-			var art dto.ArtDto
-			if err := json.NewDecoder(r.Body).Decode(&art); err != nil {
+			if art, err := dto.DecodeArt(r.Body); err != nil {
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			} else {
 				art.Id = int(id)
-				h.PutArt(w, r, &art)
+				h.PutArt(w, r, art)
 			}
 		})
 	case http.MethodDelete:

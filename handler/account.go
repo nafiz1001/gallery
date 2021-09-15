@@ -21,12 +21,11 @@ func (h *AccountsHandler) Init(db *model.AccountDB) error {
 
 func (h AccountsHandler) PostAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var account dto.AccountDto
 
-	if err := json.NewDecoder(r.Body).Decode(&account); err != nil {
+	if account, err := dto.DecodeAccount(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 	} else {
-		if acc, err := h.db.CreateAccount(account); err != nil {
+		if acc, err := h.db.CreateAccount(*account); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		} else {
 			json.NewEncoder(w).Encode(acc)
