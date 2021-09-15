@@ -3,11 +3,10 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/nafiz1001/gallery-go/dto"
 	"github.com/nafiz1001/gallery-go/model"
 )
@@ -107,68 +106,49 @@ func (h ArtsHandler) AuthorAuth(w http.ResponseWriter, r *http.Request, id int, 
 	})
 }
 
-func (h ArtsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	regexs := map[string]*regexp.Regexp{
-		"/arts":      regexp.MustCompile("^/arts/*$"),
-		"/arts/{id}": regexp.MustCompile("^/arts/([0-9]+)/*$"),
+func (h ArtsHandler) ArtsFuncHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.AccountAuth(w, r, func(account dto.AccountDto) {
+			h.PostArt(w, r, account)
+		})
+	case http.MethodGet:
+		h.GetArts(w, r)
 	}
+}
 
-	handlers := map[string](func(w http.ResponseWriter, r *http.Request)){
-		"/arts": func(w http.ResponseWriter, r *http.Request) {
-			switch r.Method {
-			case http.MethodPost:
-				h.AccountAuth(w, r, func(account dto.AccountDto) {
-					h.PostArt(w, r, account)
-				})
-			case http.MethodGet:
-				h.GetArts(w, r)
-			default:
-				http.Error(w, fmt.Sprintf("%s method not supported for %s", r.Method, r.RequestURI), http.StatusMethodNotAllowed)
-			}
-		},
-		"/arts/{id}": func(w http.ResponseWriter, r *http.Request) {
-			match := regexs["/arts/{id}"].FindStringSubmatch(r.RequestURI)
-			if len(match) > 0 {
-				if id, err := strconv.ParseInt(match[1], 10, 32); err != nil {
-					http.NotFound(w, r)
-				} else {
-					switch r.Method {
-					case http.MethodGet:
-						h.GetArt(w, r, int(id))
-					case http.MethodPut:
-						h.AuthorAuth(w, r, int(id), func(account dto.AccountDto) {
-							var art dto.ArtDto
-							if err := json.NewDecoder(r.Body).Decode(&art); err != nil {
-								http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-							} else {
-								art.Id = int(id)
-								h.PutArt(w, r, &art)
-							}
-						})
-					case http.MethodDelete:
-						h.AuthorAuth(w, r, int(id), func(account dto.AccountDto) {
-							h.DeleteArt(w, r, int(id))
-						})
-					default:
-						http.Error(w, fmt.Sprintf("%s method not supported for %s", r.Method, r.RequestURI), http.StatusMethodNotAllowed)
-					}
-				}
-			}
-		},
-	}
+func (h ArtsHandler) ArtByIdFuncHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, _ := strconv.ParseInt(vars["id"], 10, 32)
 
-	for route := range regexs {
-		if regexs[route].MatchString(r.RequestURI) {
-			handler, ok := handlers[route]
-
-			if ok {
-				handler(w, r)
-				return
+	switch r.Method {
+	case http.MethodGet:
+		h.GetArt(w, r, int(id))
+	case http.MethodPut:
+		h.AuthorAuth(w, r, int(id), func(account dto.AccountDto) {
+			var art dto.ArtDto
+			if err := json.NewDecoder(r.Body).Decode(&art); err != nil {
+				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			} else {
-				log.Printf("could not handle route '%s'", route)
+				art.Id = int(id)
+				h.PutArt(w, r, &art)
 			}
-		}
+		})
+	case http.MethodDelete:
+		h.AuthorAuth(w, r, int(id), func(account dto.AccountDto) {
+			h.DeleteArt(w, r, int(id))
+		})
 	}
+}
 
-	http.NotFound(w, r)
+func (h ArtsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	router := mux.NewRouter()
+
+	router.HandleFunc("/arts", h.ArtsFuncHandler).Methods(http.MethodPost, http.MethodGet)
+	router.HandleFunc("/arts/", h.ArtsFuncHandler).Methods(http.MethodPost, http.MethodGet)
+
+	router.HandleFunc("/arts/{id:[0-9]+}", h.ArtByIdFuncHandler).Methods(http.MethodGet, http.MethodPut, http.MethodDelete)
+	router.HandleFunc("/arts/{id:[0-9]+}/", h.ArtByIdFuncHandler).Methods(http.MethodGet, http.MethodPut, http.MethodDelete)
+
+	router.ServeHTTP(w, r)
 }

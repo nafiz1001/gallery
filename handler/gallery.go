@@ -2,10 +2,9 @@ package handler
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
-	"regexp"
 
+	"github.com/gorilla/mux"
 	"github.com/nafiz1001/gallery-go/model"
 )
 
@@ -47,28 +46,12 @@ func (h *GalleryHandler) Init(db *sql.DB) error {
 }
 
 func (h GalleryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	regexs := map[string]*regexp.Regexp{
-		"/arts":     regexp.MustCompile("^/arts/*"),
-		"/accounts": regexp.MustCompile("^/accounts/*"),
-	}
+	router := mux.NewRouter()
+	router.PathPrefix("/accounts").Handler(h.accountsHandler)
+	router.PathPrefix("/accounts/").Handler(h.accountsHandler)
 
-	handlers := map[string]http.Handler{
-		"/arts":     h.artsHandler,
-		"/accounts": h.accountsHandler,
-	}
+	router.PathPrefix("/arts").Handler(h.artsHandler)
+	router.PathPrefix("/arts/").Handler(h.artsHandler)
 
-	for route := range regexs {
-		if regexs[route].MatchString(r.RequestURI) {
-			handler, ok := handlers[route]
-
-			if ok {
-				handler.ServeHTTP(w, r)
-				return
-			} else {
-				log.Printf("could not handle route '%s'", route)
-			}
-		}
-	}
-
-	http.NotFound(w, r)
+	router.ServeHTTP(w, r)
 }

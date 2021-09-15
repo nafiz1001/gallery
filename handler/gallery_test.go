@@ -19,7 +19,7 @@ import (
 func GetArts(t *testing.T) []dto.ArtDto {
 	var arr []dto.ArtDto
 
-	if resp, err := http.Get("http://localhost:8080/arts"); err != nil {
+	if resp, err := http.Get("http://localhost:8080/arts/"); err != nil {
 		t.Fatal(err)
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&arr); err != nil {
@@ -103,7 +103,7 @@ func TestGallery(t *testing.T) {
 		t.Fatalf("%v length is not 0", arts)
 	}
 
-	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/accounts", `{"username":"good", "password":"good"}`, "", ""); err != nil {
+	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/accounts/", `{"username":"good", "password":"good"}`, "", ""); err != nil {
 		t.Fatal(err)
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&account); err != nil {
@@ -128,12 +128,12 @@ func TestGallery(t *testing.T) {
 		}
 	}
 
-	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts", `{"title":"title"}`, "", ""); err == nil {
+	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts/", `{"title":"title"}`, "", ""); err == nil {
 		b, _ := io.ReadAll(resp.Body)
 		t.Fatalf("expected to fail uploading because basic auth is missing\n%s", string(b))
 	}
 
-	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts", `{"title":"title"}`, "good", "good"); err != nil {
+	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts/", `{"title":"title"}`, "good", "good"); err != nil {
 		t.Fatalf("%s", err)
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {

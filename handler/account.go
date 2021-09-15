@@ -2,12 +2,10 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/nafiz1001/gallery-go/dto"
 	"github.com/nafiz1001/gallery-go/model"
 )
@@ -36,10 +34,13 @@ func (h AccountsHandler) PostAccount(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h AccountsHandler) GetAccountById(w http.ResponseWriter, r *http.Request, id int) {
+func (h AccountsHandler) GetAccountById(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if account, err := h.db.GetAccountById(id); err != nil {
+	vars := mux.Vars(r)
+	id, _ := strconv.ParseInt(vars["id"], 10, 32)
+
+	if account, err := h.db.GetAccountById(int(id)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		json.NewEncoder(w).Encode(account)
@@ -47,49 +48,13 @@ func (h AccountsHandler) GetAccountById(w http.ResponseWriter, r *http.Request, 
 }
 
 func (h AccountsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	regexs := map[string]*regexp.Regexp{
-		"/accounts":      regexp.MustCompile("^/accounts/*$"),
-		"/accounts/{id}": regexp.MustCompile("^/accounts/([^/]+)/*$"),
-	}
+	router := mux.NewRouter()
 
-	handlers := map[string](func(w http.ResponseWriter, r *http.Request)){
-		"/accounts": func(w http.ResponseWriter, r *http.Request) {
-			switch r.Method {
-			case http.MethodPost:
-				h.PostAccount(w, r)
-			default:
-				http.Error(w, fmt.Sprintf("%s method not supported for %s", r.Method, r.RequestURI), http.StatusMethodNotAllowed)
-			}
-		},
-		"/accounts/{id}": func(w http.ResponseWriter, r *http.Request) {
-			match := regexs["/accounts/{id}"].FindStringSubmatch(r.RequestURI)
-			if len(match) > 0 {
-				if id, err := strconv.ParseInt(match[1], 10, 32); err != nil {
-					http.NotFound(w, r)
-				} else {
-					switch r.Method {
-					case http.MethodGet:
-						h.GetAccountById(w, r, int(id))
-					default:
-						http.Error(w, fmt.Sprintf("%s method not supported for %s", r.Method, r.RequestURI), http.StatusMethodNotAllowed)
-					}
-				}
-			}
-		},
-	}
+	router.HandleFunc("/accounts", h.PostAccount).Methods(http.MethodPost)
+	router.HandleFunc("/accounts/", h.PostAccount).Methods(http.MethodPost)
 
-	for route := range regexs {
-		if regexs[route].MatchString(r.RequestURI) {
-			handler, ok := handlers[route]
+	router.HandleFunc("/accounts/{id:[0-9]+}", h.GetAccountById).Methods(http.MethodGet)
+	router.HandleFunc("/accounts/{id:[0-9]+}/", h.GetAccountById).Methods(http.MethodGet)
 
-			if ok {
-				handler(w, r)
-				return
-			} else {
-				log.Printf("could not handle route '%s'", route)
-			}
-		}
-	}
-
-	http.NotFound(w, r)
+	router.ServeHTTP(w, r)
 }
