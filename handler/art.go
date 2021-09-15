@@ -85,7 +85,7 @@ func (h ArtsHandler) AccountAuth(w http.ResponseWriter, r *http.Request, f func(
 	if username, password, ok := r.BasicAuth(); !ok {
 		http.Error(w, "missing or malformed Authorization header", http.StatusUnauthorized)
 	} else {
-		if account, err := h.accountDB.GetAccount(username); err != nil {
+		if account, err := h.accountDB.GetAccountByUsername(username); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		} else {
 			if password != account.Password {

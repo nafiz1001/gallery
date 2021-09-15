@@ -31,7 +31,7 @@ func (db *AccountArtsDB) Init(sqlDB *sql.DB, accountDB *AccountDB, artDB *ArtDB)
 }
 
 func (db *AccountArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.ArtDto, error) {
-	if acc, err := db.accountDB.GetAccount(account.Username); err != nil {
+	if acc, err := db.accountDB.GetAccountById(account.Id); err != nil {
 		return nil, err
 	} else {
 		if a, err := db.artDB.CreateArt(art); err != nil {
@@ -47,7 +47,7 @@ func (db *AccountArtsDB) AddArt(account dto.AccountDto, art dto.ArtDto) (*dto.Ar
 }
 
 func (db *AccountArtsDB) IsAuthor(account dto.AccountDto, artId int) bool {
-	if acc, err := db.accountDB.GetAccount(account.Username); err != nil {
+	if acc, err := db.accountDB.GetAccountByUsername(account.Username); err != nil {
 		return false
 	} else {
 		var tmpId int
@@ -56,26 +56,22 @@ func (db *AccountArtsDB) IsAuthor(account dto.AccountDto, artId int) bool {
 	}
 }
 
-func (db *AccountArtsDB) GetArtsByUsername(username string) ([]dto.ArtDto, error) {
+func (db *AccountArtsDB) GetArtsByAccountId(id int) ([]dto.ArtDto, error) {
 	v := []dto.ArtDto{}
 
-	if account, err := db.accountDB.GetAccount(username); err != nil {
-		return v, err
+	if rows, err := db.sqlDB.Query("SELECT art_id FROM account_arts WHERE account_id = ?", id); err != nil {
+		return []dto.ArtDto{}, err
 	} else {
-		if rows, err := db.sqlDB.Query("SELECT art_id FROM account_arts WHERE account_id = ?", account.Id); err != nil {
-			return []dto.ArtDto{}, err
-		} else {
-			defer rows.Close()
-			for rows.Next() {
-				var artId int
-				if err := rows.Scan(&artId); err != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var artId int
+			if err := rows.Scan(&artId); err != nil {
+				return []dto.ArtDto{}, err
+			} else {
+				if art, err := db.artDB.GetArt(artId); err != nil {
 					return []dto.ArtDto{}, err
 				} else {
-					if art, err := db.artDB.GetArt(artId); err != nil {
-						return []dto.ArtDto{}, err
-					} else {
-						v = append(v, *art)
-					}
+					v = append(v, *art)
 				}
 			}
 		}

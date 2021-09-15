@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 
 	"github.com/nafiz1001/gallery-go/dto"
 	"github.com/nafiz1001/gallery-go/model"
@@ -35,10 +36,10 @@ func (h AccountsHandler) PostAccount(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h AccountsHandler) GetAccount(w http.ResponseWriter, r *http.Request, username string) {
+func (h AccountsHandler) GetAccountById(w http.ResponseWriter, r *http.Request, id int) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if account, err := h.db.GetAccount(username); err != nil {
+	if account, err := h.db.GetAccountById(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		json.NewEncoder(w).Encode(account)
@@ -63,11 +64,15 @@ func (h AccountsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"/accounts/{id}": func(w http.ResponseWriter, r *http.Request) {
 			match := regexs["/accounts/{id}"].FindStringSubmatch(r.RequestURI)
 			if len(match) > 0 {
-				switch r.Method {
-				case http.MethodGet:
-					h.GetAccount(w, r, match[1])
-				default:
-					http.Error(w, fmt.Sprintf("%s method not supported for %s", r.Method, r.RequestURI), http.StatusMethodNotAllowed)
+				if id, err := strconv.ParseInt(match[1], 10, 32); err != nil {
+					http.NotFound(w, r)
+				} else {
+					switch r.Method {
+					case http.MethodGet:
+						h.GetAccountById(w, r, int(id))
+					default:
+						http.Error(w, fmt.Sprintf("%s method not supported for %s", r.Method, r.RequestURI), http.StatusMethodNotAllowed)
+					}
 				}
 			}
 		},

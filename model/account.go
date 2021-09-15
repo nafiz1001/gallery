@@ -26,7 +26,7 @@ func (db *AccountDB) Init(sqlDB *sql.DB) error {
 }
 
 func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, error) {
-	if a, _ := db.GetAccount(account.Username); a != nil {
+	if a, _ := db.GetAccountByUsername(account.Username); a != nil {
 		return nil, fmt.Errorf("user '%s' already created", a.Username)
 	} else {
 		if res, err := db.sqlDB.Exec(`INSERT INTO accounts (username, password) VALUES (?, ?)`, account.Username, account.Password); err != nil {
@@ -39,7 +39,21 @@ func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, err
 	}
 }
 
-func (db *AccountDB) GetAccount(username string) (*dto.AccountDto, error) {
+func (db *AccountDB) GetAccountById(id int) (*dto.AccountDto, error) {
+	var username string
+	var password string
+	if err := db.sqlDB.QueryRow(`SELECT id, username, password FROM accounts WHERE id = ?`, id).Scan(&id, &username, &password); err != nil {
+		return nil, err
+	} else {
+		return &dto.AccountDto{
+			Id:       id,
+			Username: username,
+			Password: password,
+		}, nil
+	}
+}
+
+func (db *AccountDB) GetAccountByUsername(username string) (*dto.AccountDto, error) {
 	var id int
 	var password string
 	if err := db.sqlDB.QueryRow(`SELECT id, username, password FROM accounts WHERE username = ?`, username).Scan(&id, &username, &password); err != nil {

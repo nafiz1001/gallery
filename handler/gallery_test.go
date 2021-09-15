@@ -115,7 +115,7 @@ func TestGallery(t *testing.T) {
 		}
 	}
 
-	if resp, err := NewRequest(t, http.MethodGet, "http://localhost:8080/accounts/"+account.Username, "", "", ""); err != nil {
+	if resp, err := NewRequest(t, http.MethodGet, fmt.Sprintf("http://localhost:8080/accounts/%d", account.Id), "", "", ""); err != nil {
 		t.Fatal(err)
 	} else {
 		var tmp dto.AccountDto
