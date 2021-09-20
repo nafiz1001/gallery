@@ -38,8 +38,8 @@ func (db *AccountDB) Init(database *DB) error {
 }
 
 func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, error) {
-	if a, _ := db.GetAccountByUsername(account.Username); a == nil {
-		return nil, fmt.Errorf("user '%s' already created", a.Username)
+	if _, err := db.GetAccountByUsername(account.Username); err == nil {
+		return nil, fmt.Errorf("user '%s' already created", account.Username)
 	} else {
 		var model Account
 		model.fromDto(account)
