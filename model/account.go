@@ -38,25 +38,34 @@ func (db *AccountDB) Init(database *DB) error {
 }
 
 func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, error) {
-	if a, _ := db.GetAccountByUsername(account.Username); a == nil {
-		return nil, fmt.Errorf("user '%s' already created", a.Username)
+	if _, err := db.GetAccountByUsername(account.Username); err == nil {
+		return nil, fmt.Errorf("user '%s' already created", account.Username)
 	} else {
 		var model Account
 		model.fromDto(account)
 		model.Arts = []Art{}
-		err := db.db.Create(&model).Error
-		return model.toDto(), err
+		if err := db.db.Create(&model).Error; err != nil {
+			return nil, err
+		} else {
+			return model.toDto(), err
+		}
 	}
 }
 
 func (db *AccountDB) GetAccountById(id int) (*dto.AccountDto, error) {
 	var model Account
-	err := db.db.First(&model, id).Error
-	return model.toDto(), err
+	if err := db.db.First(&model, id).Error; err != nil {
+		return nil, err
+	} else {
+		return model.toDto(), err
+	}
 }
 
 func (db *AccountDB) GetAccountByUsername(username string) (*dto.AccountDto, error) {
 	var model Account
-	err := db.db.First(&model, "username = ?", username).Error
-	return model.toDto(), err
+	if err := db.db.First(&model, "username = ?", username).Error; err != nil {
+		return nil, err
+	} else {
+		return model.toDto(), err
+	}
 }

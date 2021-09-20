@@ -28,12 +28,10 @@ func (h ArtsHandler) PostArt(w http.ResponseWriter, r *http.Request, account dto
 
 	if art, err := dto.DecodeArt(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+	} else if art, err := h.artDB.CreateArt(*art, account); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
-		if art, err := h.artDB.CreateArt(*art, account); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		} else {
-			json.NewEncoder(w).Encode(art)
-		}
+		json.NewEncoder(w).Encode(art)
 	}
 }
 
@@ -79,16 +77,12 @@ func (h ArtsHandler) DeleteArt(w http.ResponseWriter, r *http.Request, id int) {
 func (h ArtsHandler) AccountAuth(w http.ResponseWriter, r *http.Request, f func(dto.AccountDto)) {
 	if username, password, ok := r.BasicAuth(); !ok {
 		http.Error(w, "missing or malformed Authorization header", http.StatusUnauthorized)
+	} else if account, err := h.accountDB.GetAccountByUsername(username); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else if password != account.Password {
+		http.Error(w, "password is incorrect", http.StatusUnauthorized)
 	} else {
-		if account, err := h.accountDB.GetAccountByUsername(username); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		} else {
-			if password != account.Password {
-				http.Error(w, "password is incorrect", http.StatusUnauthorized)
-			} else {
-				f(*account)
-			}
-		}
+		f(*account)
 	}
 }
 

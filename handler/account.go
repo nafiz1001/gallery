@@ -24,12 +24,10 @@ func (h AccountsHandler) PostAccount(w http.ResponseWriter, r *http.Request) {
 
 	if account, err := dto.DecodeAccount(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+	} else if acc, err := h.db.CreateAccount(*account); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
-		if acc, err := h.db.CreateAccount(*account); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		} else {
-			json.NewEncoder(w).Encode(acc)
-		}
+		json.NewEncoder(w).Encode(acc)
 	}
 }
 

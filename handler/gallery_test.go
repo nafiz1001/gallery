@@ -23,10 +23,8 @@ func GetArts(t *testing.T) []dto.ArtDto {
 
 	if resp, err := http.Get("http://localhost:8080/arts/"); err != nil {
 		t.Fatal(err)
-	} else {
-		if err := json.NewDecoder(resp.Body).Decode(&arr); err != nil {
-			t.Fatal(err)
-		}
+	} else if err := json.NewDecoder(resp.Body).Decode(&arr); err != nil {
+		t.Fatal(err)
 	}
 
 	return arr
@@ -112,14 +110,10 @@ func TestGallery(t *testing.T) {
 
 	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/accounts/", `{"username":"good", "password":"good"}`, "", ""); err != nil {
 		t.Fatal(err)
-	} else {
-		if err := json.NewDecoder(resp.Body).Decode(&account); err != nil {
-			t.Fatal(err)
-		} else {
-			if account.Username != "good" {
-				t.Fatalf("%s is not equal to 'good'", account.Username)
-			}
-		}
+	} else if err := json.NewDecoder(resp.Body).Decode(&account); err != nil {
+		t.Fatal(err)
+	} else if account.Username != "good" {
+		t.Fatalf("%s is not equal to 'good'", account.Username)
 	}
 
 	if resp, err := NewRequest(t, http.MethodGet, fmt.Sprintf("http://localhost:8080/accounts/%d", account.Id), "", "", ""); err != nil {
@@ -128,10 +122,8 @@ func TestGallery(t *testing.T) {
 		var tmp dto.AccountDto
 		if err := json.NewDecoder(resp.Body).Decode(&tmp); err != nil {
 			t.Fatal(err)
-		} else {
-			if tmp.Id != account.Id {
-				t.Fatalf("%d is not equal to %d", tmp.Id, account.Id)
-			}
+		} else if tmp.Id != account.Id {
+			t.Fatalf("%d is not equal to %d", tmp.Id, account.Id)
 		}
 	}
 
@@ -142,17 +134,12 @@ func TestGallery(t *testing.T) {
 
 	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts/", `{"title":"title"}`, "good", "good"); err != nil {
 		t.Fatalf("%s", err)
-	} else {
-		if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
-			t.Fatal(err)
-		} else {
-			if art.Title != "title" {
-				t.Fatalf("the title of response (%v) is not equal to 'title'", art)
-			}
-			if art.AuthorId != account.Id {
-				t.Fatalf("the authorId of response (%v) is not equal to '%d'", art, account.Id)
-			}
-		}
+	} else if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
+		t.Fatal(err)
+	} else if art.Title != "title" {
+		t.Fatalf("the title of response (%v) is not equal to 'title'", art)
+	} else if art.AuthorId != account.Id {
+		t.Fatalf("the authorId of response (%v) is not equal to '%d'", art, account.Id)
 	}
 
 	if arts := GetArts(t); arts[0].Id != art.Id {
@@ -167,14 +154,10 @@ func TestGallery(t *testing.T) {
 
 	if resp, err := NewRequest(t, http.MethodPut, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), `{"title":"title2"}`, "good", "good"); err != nil {
 		t.Fatalf("%s", err)
-	} else {
-		if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
-			t.Fatal(err)
-		} else {
-			if art.Title != "title2" {
-				t.Fatalf("the title of response (%v) is not equal to 'title2'", art)
-			}
-		}
+	} else if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
+		t.Fatal(err)
+	} else if art.Title != "title2" {
+		t.Fatalf("the title of response (%v) is not equal to 'title2'", art)
 	}
 
 	if arts := GetArts(t); arts[0].Title != art.Title {
@@ -191,10 +174,8 @@ func TestGallery(t *testing.T) {
 
 	if resp, err := NewRequest(t, http.MethodDelete, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), "", "good", "good"); err != nil {
 		t.Fatal(err)
-	} else {
-		if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
-			t.Fatal(err)
-		}
+	} else if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
+		t.Fatal(err)
 	}
 
 	if arts := GetArts(t); len(arts) != 0 {
