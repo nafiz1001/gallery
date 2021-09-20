@@ -44,19 +44,28 @@ func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, err
 		var model Account
 		model.fromDto(account)
 		model.Arts = []Art{}
-		err := db.db.Create(&model).Error
-		return model.toDto(), err
+		if err := db.db.Create(&model).Error; err != nil {
+			return nil, err
+		} else {
+			return model.toDto(), err
+		}
 	}
 }
 
 func (db *AccountDB) GetAccountById(id int) (*dto.AccountDto, error) {
 	var model Account
-	err := db.db.First(&model, id).Error
-	return model.toDto(), err
+	if err := db.db.First(&model, id).Error; err != nil {
+		return nil, err
+	} else {
+		return model.toDto(), err
+	}
 }
 
 func (db *AccountDB) GetAccountByUsername(username string) (*dto.AccountDto, error) {
 	var model Account
-	err := db.db.First(&model, "username = ?", username).Error
-	return model.toDto(), err
+	if err := db.db.First(&model, "username = ?", username).Error; err != nil {
+		return nil, err
+	} else {
+		return model.toDto(), err
+	}
 }

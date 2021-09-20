@@ -45,56 +45,59 @@ func (db *ArtDB) CreateArt(art dto.ArtDto, account dto.AccountDto) (*dto.ArtDto,
 
 	if err := db.db.Create(&artModel).Error; err != nil {
 		return nil, err
+	} else if err := db.db.Model(&accModel).Association("Arts").Append(&artModel); err != nil {
+		return nil, err
+	} else {
+		return artModel.toDto(), err
 	}
-
-	err := db.db.Model(&accModel).Association("Arts").Append(&artModel)
-	return artModel.toDto(), err
 }
 
 func (db *ArtDB) GetArt(id int) (*dto.ArtDto, error) {
 	var model Art
-	err := db.db.First(&model, id).Error
-	return model.toDto(), err
+	if err := db.db.First(&model, id).Error; err != nil {
+		return nil, err
+	} else {
+		return model.toDto(), err
+	}
 }
 
 func (db *ArtDB) GetArts() ([]dto.ArtDto, error) {
 	var models []Art
 
-	err := db.db.Find(&models).Error
-	if err != nil {
+	if err := db.db.Find(&models).Error; err != nil {
 		return []dto.ArtDto{}, err
+	} else {
+		arts := []dto.ArtDto{}
+		for _, m := range models {
+			arts = append(arts, *m.toDto())
+		}
+		return arts, nil
 	}
-
-	arts := []dto.ArtDto{}
-	for _, m := range models {
-		arts = append(arts, *m.toDto())
-	}
-
-	return arts, nil
 }
 
 func (db *ArtDB) UpdateArt(art dto.ArtDto) (*dto.ArtDto, error) {
 	var model Art
 	model.fromDto(art)
-	err := db.db.Model(&model).Omit("account_id").Updates(&model).Error
-	return model.toDto(), err
+	if err := db.db.Model(&model).Omit("account_id").Updates(&model).Error; err != nil {
+		return nil, err
+	} else {
+		return model.toDto(), err
+	}
 }
 
 func (db *ArtDB) DeleteArt(id int) (*dto.ArtDto, error) {
 	var artModel Art
+	var accModel Account
+
 	if err := db.db.First(&artModel, id).Error; err != nil {
 		return nil, err
-	}
-
-	var accModel Account
-	if err := db.db.First(&accModel, artModel.AccountID).Error; err != nil {
+	} else if err := db.db.First(&accModel, artModel.AccountID).Error; err != nil {
 		return nil, err
-	}
-
-	if err := db.db.Model(&accModel).Association("Arts").Delete(&artModel); err != nil {
+	} else if err := db.db.Model(&accModel).Association("Arts").Delete(&artModel); err != nil {
 		return nil, err
+	} else if err := db.db.Delete(&artModel, id).Error; err != nil {
+		return nil, err
+	} else {
+		return artModel.toDto(), err
 	}
-
-	err := db.db.Delete(&artModel, id).Error
-	return artModel.toDto(), err
 }

@@ -13,6 +13,9 @@ type AccountDto struct {
 
 func DecodeAccount(r io.Reader) (*AccountDto, error) {
 	var account AccountDto
-	err := json.NewDecoder(r).Decode(&account)
-	return &account, err
+	if err := json.NewDecoder(r).Decode(&account); err != nil {
+		return nil, err
+	} else {
+		return &account, err
+	}
 }

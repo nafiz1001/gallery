@@ -14,6 +14,9 @@ type ArtDto struct {
 
 func DecodeArt(r io.Reader) (*ArtDto, error) {
 	var art ArtDto
-	err := json.NewDecoder(r).Decode(&art)
-	return &art, err
+	if err := json.NewDecoder(r).Decode(&art); err != nil {
+		return nil, err
+	} else {
+		return &art, err
+	}
 }
