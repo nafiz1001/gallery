@@ -18,13 +18,16 @@ type Account struct {
 	Arts     []Art `gorm:"foreignKey:AccountID"`
 }
 
-func (model *Account) fromDto(data dto.AccountDto) {
+func DtoToAccount(data dto.AccountDto) Account {
+	var model Account
 	model.ID = uint(data.Id)
 	model.Username = data.Username
 	model.Password = data.Password
+
+	return model
 }
 
-func (model *Account) toDto() *dto.AccountDto {
+func (model *Account) ToDto() *dto.AccountDto {
 	return &dto.AccountDto{
 		Id:       int(model.ID),
 		Username: model.Username,
@@ -41,13 +44,12 @@ func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, err
 	if _, err := db.GetAccountByUsername(account.Username); err == nil {
 		return nil, fmt.Errorf("user '%s' already created", account.Username)
 	} else {
-		var model Account
-		model.fromDto(account)
+		model := DtoToAccount(account)
 		model.Arts = []Art{}
 		if err := db.db.Create(&model).Error; err != nil {
 			return nil, err
 		} else {
-			return model.toDto(), err
+			return model.ToDto(), err
 		}
 	}
 }
@@ -57,7 +59,7 @@ func (db *AccountDB) GetAccountById(id int) (*dto.AccountDto, error) {
 	if err := db.db.First(&model, id).Error; err != nil {
 		return nil, err
 	} else {
-		return model.toDto(), err
+		return model.ToDto(), err
 	}
 }
 
@@ -66,6 +68,6 @@ func (db *AccountDB) GetAccountByUsername(username string) (*dto.AccountDto, err
 	if err := db.db.First(&model, "username = ?", username).Error; err != nil {
 		return nil, err
 	} else {
-		return model.toDto(), err
+		return model.ToDto(), err
 	}
 }

@@ -16,13 +16,16 @@ type Art struct {
 	AccountID uint
 }
 
-func (model *Art) fromDto(data dto.ArtDto) {
-	model.ID = uint(data.Id)
-	model.Quantity = data.Quantity
-	model.Title = data.Title
+func DtoToArt(data dto.ArtDto) Art {
+	var art Art
+	art.ID = uint(data.Id)
+	art.Quantity = data.Quantity
+	art.Title = data.Title
+
+	return art
 }
 
-func (model *Art) toDto() *dto.ArtDto {
+func (model *Art) ToDto() *dto.ArtDto {
 	return &dto.ArtDto{
 		Id:       int(model.ID),
 		Quantity: model.Quantity,
@@ -37,18 +40,16 @@ func (db *ArtDB) Init(database *DB) error {
 }
 
 func (db *ArtDB) CreateArt(art dto.ArtDto, account dto.AccountDto) (*dto.ArtDto, error) {
-	var artModel Art
-	artModel.fromDto(art)
+	artModel := DtoToArt(art)
 
-	var accModel Account
-	accModel.fromDto(account)
+	accModel := DtoToAccount(account)
 
 	if err := db.db.Create(&artModel).Error; err != nil {
 		return nil, err
 	} else if err := db.db.Model(&accModel).Association("Arts").Append(&artModel); err != nil {
 		return nil, err
 	} else {
-		return artModel.toDto(), err
+		return artModel.ToDto(), err
 	}
 }
 
@@ -57,7 +58,7 @@ func (db *ArtDB) GetArt(id int) (*dto.ArtDto, error) {
 	if err := db.db.First(&model, id).Error; err != nil {
 		return nil, err
 	} else {
-		return model.toDto(), err
+		return model.ToDto(), err
 	}
 }
 
@@ -69,19 +70,18 @@ func (db *ArtDB) GetArts() ([]dto.ArtDto, error) {
 	} else {
 		arts := []dto.ArtDto{}
 		for _, m := range models {
-			arts = append(arts, *m.toDto())
+			arts = append(arts, *m.ToDto())
 		}
 		return arts, nil
 	}
 }
 
 func (db *ArtDB) UpdateArt(art dto.ArtDto) (*dto.ArtDto, error) {
-	var model Art
-	model.fromDto(art)
+	model := DtoToArt(art)
 	if err := db.db.Model(&model).Omit("account_id").Updates(&model).Error; err != nil {
 		return nil, err
 	} else {
-		return model.toDto(), err
+		return model.ToDto(), err
 	}
 }
 
@@ -98,6 +98,6 @@ func (db *ArtDB) DeleteArt(id int) (*dto.ArtDto, error) {
 	} else if err := db.db.Delete(&artModel, id).Error; err != nil {
 		return nil, err
 	} else {
-		return artModel.toDto(), err
+		return artModel.ToDto(), err
 	}
 }
