@@ -124,7 +124,7 @@ func (h ArtsHandler) ArtByIdFuncHandler(w http.ResponseWriter, r *http.Request) 
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			} else {
-				art.Id = int(id)
+				art.Id = uint(id)
 				h.PutArt(w, r, art)
 			}
 		})

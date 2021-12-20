@@ -6,7 +6,7 @@ import (
 )
 
 type ArtDto struct {
-	Id       int    `json:"id"`
+	Id       uint   `json:"id"`
 	Quantity int    `json:"quantity"`
 	Title    string `json:"title"`
 	AuthorId uint   `json:"author_id"`

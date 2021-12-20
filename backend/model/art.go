@@ -27,7 +27,7 @@ func DtoToArt(data dto.ArtDto) Art {
 
 func (model *Art) ToDto() *dto.ArtDto {
 	return &dto.ArtDto{
-		Id:       int(model.ID),
+		Id:       uint(model.ID),
 		Quantity: model.Quantity,
 		Title:    model.Title,
 		AuthorId: uint(model.AccountID),
