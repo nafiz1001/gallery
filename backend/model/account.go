@@ -18,15 +18,19 @@ type Account struct {
 	Arts     []Art `gorm:"foreignKey:AccountID"`
 }
 
+// Creates Account object from AccountDto.
+// It does not add the account to the database.
 func DtoToAccount(data dto.AccountDto) Account {
 	var model Account
 	model.ID = uint(data.Id)
 	model.Username = data.Username
 	model.Password = data.Password
+	model.Arts = []Art{}
 
 	return model
 }
 
+// Converts Acccount to AccountDto.
 func (model *Account) ToDto() *dto.AccountDto {
 	return &dto.AccountDto{
 		Id:       int(model.ID),
@@ -35,17 +39,18 @@ func (model *Account) ToDto() *dto.AccountDto {
 	}
 }
 
+// Creates account table in the database.
 func (db *AccountDB) Init(database *DB) error {
 	db.db = database.GormDB
 	return db.db.AutoMigrate(&Account{})
 }
 
+// Creates new account if there is no existing account with identical username.
 func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, error) {
 	if _, err := db.GetAccountByUsername(account.Username); err == nil {
 		return nil, fmt.Errorf("user '%s' already created", account.Username)
 	} else {
 		model := DtoToAccount(account)
-		model.Arts = []Art{}
 		if err := db.db.Create(&model).Error; err != nil {
 			return nil, err
 		} else {
@@ -54,6 +59,7 @@ func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, err
 	}
 }
 
+// Gets account by id if it exists.
 func (db *AccountDB) GetAccountById(id int) (*dto.AccountDto, error) {
 	var model Account
 	if err := db.db.First(&model, id).Error; err != nil {
@@ -63,6 +69,7 @@ func (db *AccountDB) GetAccountById(id int) (*dto.AccountDto, error) {
 	}
 }
 
+// Gets account by username if it exists
 func (db *AccountDB) GetAccountByUsername(username string) (*dto.AccountDto, error) {
 	var model Account
 	if err := db.db.First(&model, "username = ?", username).Error; err != nil {
