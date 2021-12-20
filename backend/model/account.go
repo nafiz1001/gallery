@@ -33,7 +33,7 @@ func DtoToAccount(data dto.AccountDto) Account {
 // Converts Acccount to AccountDto.
 func (model *Account) ToDto() *dto.AccountDto {
 	return &dto.AccountDto{
-		Id:       int(model.ID),
+		Id:       uint(model.ID),
 		Username: model.Username,
 		Password: model.Password,
 	}
@@ -47,6 +47,7 @@ func (db *AccountDB) Init(database *DB) error {
 
 // Creates new account if there is no existing account with identical username.
 func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, error) {
+	account.Id = 0
 	if _, err := db.GetAccountByUsername(account.Username); err == nil {
 		return nil, fmt.Errorf("user '%s' already created", account.Username)
 	} else {
@@ -54,13 +55,13 @@ func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, err
 		if err := db.db.Create(&model).Error; err != nil {
 			return nil, err
 		} else {
-			return model.ToDto(), err
+			return model.ToDto(), nil
 		}
 	}
 }
 
 // Gets account by id if it exists.
-func (db *AccountDB) GetAccountById(id int) (*dto.AccountDto, error) {
+func (db *AccountDB) GetAccountById(id uint) (*dto.AccountDto, error) {
 	var model Account
 	if err := db.db.First(&model, id).Error; err != nil {
 		return nil, err

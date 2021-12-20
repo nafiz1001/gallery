@@ -6,7 +6,7 @@ import (
 )
 
 type AccountDto struct {
-	Id       int    `json:"id"`
+	Id       uint   `json:"id"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }

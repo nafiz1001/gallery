@@ -30,7 +30,7 @@ func (model *Art) ToDto() *dto.ArtDto {
 		Id:       int(model.ID),
 		Quantity: model.Quantity,
 		Title:    model.Title,
-		AuthorId: int(model.AccountID),
+		AuthorId: uint(model.AccountID),
 	}
 }
 

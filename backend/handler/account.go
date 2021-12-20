@@ -37,7 +37,7 @@ func (h AccountsHandler) GetAccountById(w http.ResponseWriter, r *http.Request) 
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 32)
 
-	if account, err := h.db.GetAccountById(int(id)); err != nil {
+	if account, err := h.db.GetAccountById(uint(id)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		json.NewEncoder(w).Encode(account)
