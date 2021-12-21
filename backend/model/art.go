@@ -53,7 +53,7 @@ func (db *ArtDB) CreateArt(art dto.ArtDto, account dto.AccountDto) (*dto.ArtDto,
 	}
 }
 
-func (db *ArtDB) GetArt(id int) (*dto.ArtDto, error) {
+func (db *ArtDB) GetArt(id uint) (*dto.ArtDto, error) {
 	var model Art
 	if err := db.db.First(&model, id).Error; err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (db *ArtDB) UpdateArt(art dto.ArtDto) (*dto.ArtDto, error) {
 	}
 }
 
-func (db *ArtDB) DeleteArt(id int) (*dto.ArtDto, error) {
+func (db *ArtDB) DeleteArt(id uint) (*dto.ArtDto, error) {
 	var artModel Art
 	var accModel Account
 

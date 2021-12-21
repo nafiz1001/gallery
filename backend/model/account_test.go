@@ -1,4 +1,4 @@
-package model
+package model_test
 
 import (
 	"testing"
@@ -7,26 +7,27 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/nafiz1001/gallery-go/dto"
+	"github.com/nafiz1001/gallery-go/model"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-func AccountDBInit(t *testing.T) AccountDB {
+func AccountDBInit(t *testing.T) (model.AccountDB, *gorm.DB) {
 	gormDB, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	db := DB{GormDB: gormDB}
+	db := model.DB{GormDB: gormDB}
 
-	var accountDB AccountDB
+	var accountDB model.AccountDB
 	err = accountDB.Init(&db)
 	require.NoError(t, err)
 
-	return accountDB
+	return accountDB, gormDB
 }
 
-func CreateAccount(t *testing.T, db AccountDB, username string, password string) dto.AccountDto {
+func CreateAccount(t *testing.T, db model.AccountDB, username string, password string) dto.AccountDto {
 	dto := dto.AccountDto{
 		Username: username,
 		Password: password,
@@ -40,17 +41,17 @@ func CreateAccount(t *testing.T, db AccountDB, username string, password string)
 }
 
 func TestAccountDBInit(t *testing.T) {
-	db := AccountDBInit(t)
+	_, gormDB := AccountDBInit(t)
 	defer func() {
-		otherDb, _ := db.db.DB()
+		otherDb, _ := gormDB.DB()
 		otherDb.Close()
 	}()
 }
 
 func TestCreateAccount(t *testing.T) {
-	db := AccountDBInit(t)
+	db, gormDB := AccountDBInit(t)
 	defer func() {
-		otherDb, _ := db.db.DB()
+		otherDb, _ := gormDB.DB()
 		otherDb.Close()
 	}()
 
@@ -78,10 +79,10 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestGetAccountById(t *testing.T) {
-	db := AccountDBInit(t)
+	db, gormDB := AccountDBInit(t)
 	account := CreateAccount(t, db, "username", "password")
 	defer func() {
-		otherDb, _ := db.db.DB()
+		otherDb, _ := gormDB.DB()
 		otherDb.Close()
 	}()
 
@@ -98,9 +99,9 @@ func TestGetAccountById(t *testing.T) {
 }
 
 func TestGetAccountByUsername(t *testing.T) {
-	db := AccountDBInit(t)
+	db, gormDB := AccountDBInit(t)
 	defer func() {
-		otherDb, _ := db.db.DB()
+		otherDb, _ := gormDB.DB()
 		otherDb.Close()
 	}()
 	account := CreateAccount(t, db, "username", "password")
