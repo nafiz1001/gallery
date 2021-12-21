@@ -73,7 +73,7 @@ func TestCreateAccount(t *testing.T) {
 	})
 	if assert.NoError(t, err) && assert.NotNil(t, account2) {
 		assert.NotEqual(t, account2.Id, account1.Id)
-		assert.NotEqual(t, account2.Username, account1.Username)
+		assert.Equal(t, account2.Username, "username2")
 	}
 }
 
