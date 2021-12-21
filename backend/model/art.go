@@ -21,6 +21,7 @@ func DtoToArt(data dto.ArtDto) Art {
 	art.ID = uint(data.Id)
 	art.Quantity = data.Quantity
 	art.Title = data.Title
+	art.AccountID = data.AuthorId
 
 	return art
 }
@@ -39,17 +40,18 @@ func (db *ArtDB) Init(database *DB) error {
 	return db.db.AutoMigrate(&Art{})
 }
 
-func (db *ArtDB) CreateArt(art dto.ArtDto, account dto.AccountDto) (*dto.ArtDto, error) {
+func (db *ArtDB) CreateArt(art dto.ArtDto) (*dto.ArtDto, error) {
 	artModel := DtoToArt(art)
+	accModel := Account{}
 
-	accModel := DtoToAccount(account)
-
-	if err := db.db.Create(&artModel).Error; err != nil {
+	if err := db.db.First(&accModel, art.AuthorId).Error; err != nil {
+		return nil, err
+	} else if err := db.db.Create(&artModel).Error; err != nil {
 		return nil, err
 	} else if err := db.db.Model(&accModel).Association("Arts").Append(&artModel); err != nil {
 		return nil, err
 	} else {
-		return artModel.ToDto(), err
+		return artModel.ToDto(), nil
 	}
 }
 
@@ -78,9 +80,14 @@ func (db *ArtDB) GetArts() ([]dto.ArtDto, error) {
 
 func (db *ArtDB) UpdateArt(art dto.ArtDto) (*dto.ArtDto, error) {
 	model := DtoToArt(art)
-	if err := db.db.Model(&model).Omit("account_id").Updates(&model).Error; err != nil {
+	if err := db.db.First(&Account{}, art.AuthorId).Error; err != nil {
+		return nil, err
+	} else if _, err := db.GetArt(model.ID); err != nil {
+		return nil, err
+	} else if err := db.db.Model(&model).Updates(&model).Error; err != nil {
 		return nil, err
 	} else {
+		model.AccountID = art.AuthorId
 		return model.ToDto(), err
 	}
 }

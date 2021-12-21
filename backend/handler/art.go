@@ -28,7 +28,7 @@ func (h ArtsHandler) PostArt(w http.ResponseWriter, r *http.Request, account dto
 
 	if art, err := dto.DecodeArt(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-	} else if art, err := h.artDB.CreateArt(*art, account); err != nil {
+	} else if art, err := h.artDB.CreateArt(*art); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		json.NewEncoder(w).Encode(art)
