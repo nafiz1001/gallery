@@ -49,7 +49,7 @@ func (db *AccountDB) Init(database *DB) error {
 func (db *AccountDB) CreateAccount(account dto.AccountDto) (*dto.AccountDto, error) {
 	account.Id = 0
 	if _, err := db.GetAccountByUsername(account.Username); err == nil {
-		return nil, fmt.Errorf("user '%s' already created", account.Username)
+		return nil, fmt.Errorf("username '%s' already exists", account.Username)
 	} else {
 		model := DtoToAccount(account)
 		if err := db.db.Create(&model).Error; err != nil {
