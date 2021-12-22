@@ -51,10 +51,10 @@ func (h ArtsHandler) GetArts(w http.ResponseWriter, r *http.Request) {
 func (h ArtsHandler) GetArt(w http.ResponseWriter, r *http.Request, id uint) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if arts, err := h.artDB.GetArt(id); err != nil {
+	if art, err := h.artDB.GetArt(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
-		json.NewEncoder(w).Encode(arts)
+		json.NewEncoder(w).Encode(art)
 	}
 }
 
