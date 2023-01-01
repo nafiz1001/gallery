@@ -1,5 +1,7 @@
 # Gallery
 
+A basic CRUD server for art gallery written in Go. 
+
 ## Usage
 
 Download all dependencies
