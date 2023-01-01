@@ -104,88 +104,98 @@ func TestGallery(t *testing.T) {
 	var art dto.ArtDto
 	var account dto.AccountDto
 
-	// there should be no art in the beginning
-	if arts := GetArts(t); len(arts) != 0 {
-		t.Fatalf("%v length is not 0", arts)
-	}
-
-	// successfully create account
-	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/accounts/", `{"username":"good", "password":"good"}`, "", ""); err != nil {
-		t.Fatal(err)
-	} else if err := json.NewDecoder(resp.Body).Decode(&account); err != nil {
-		t.Fatal(err)
-	} else if account.Username != "good" {
-		t.Fatalf("%s is not equal to 'good'", account.Username)
-	}
-
-	// new account should exist
-	if resp, err := NewRequest(t, http.MethodGet, fmt.Sprintf("http://localhost:8080/accounts/%d", account.Id), "", "", ""); err != nil {
-		t.Fatal(err)
-	} else {
-		var tmp dto.AccountDto
-		if err := json.NewDecoder(resp.Body).Decode(&tmp); err != nil {
-			t.Fatal(err)
-		} else if tmp.Id != account.Id {
-			t.Fatalf("%d is not equal to %d", tmp.Id, account.Id)
+	t.Run("No art at the beginning", func(t *testing.T) {
+		if arts := GetArts(t); len(arts) != 0 {
+			t.Fatalf("%v length is not 0", arts)
 		}
-	}
+	})
 
-	// expected to fail creating art because basic auth is missing
-	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts/", `{"title":"title"}`, "", ""); err == nil {
-		b, _ := io.ReadAll(resp.Body)
-		t.Fatalf("expected to fail creating art because basic auth is missing\n%s", string(b))
-	}
+	t.Run("Successfully create first account", func(t *testing.T) {
+		if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/accounts/", `{"username":"good", "password":"good"}`, "", ""); err != nil {
+			t.Fatal(err)
+		} else if err := json.NewDecoder(resp.Body).Decode(&account); err != nil {
+			t.Fatal(err)
+		} else if account.Username != "good" {
+			t.Fatalf("%s is not equal to 'good'", account.Username)
+		}
+	})
 
-	// successfully create art
-	if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts/", `{"title":"title"}`, "good", "good"); err != nil {
-		t.Fatal(err)
-	} else if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
-		t.Fatal(err)
-	} else if art.Title != "title" {
-		t.Fatalf("the title of response (%v) is not equal to 'title'", art)
-	} else if art.AuthorId != account.Id {
-		t.Fatalf("the authorId of response (%v) is not equal to '%d'", art, account.Id)
-	}
+	t.Run("First account created exists", func(t *testing.T) {
+		if resp, err := NewRequest(t, http.MethodGet, fmt.Sprintf("http://localhost:8080/accounts/%d", account.Id), "", "", ""); err != nil {
+			t.Fatal(err)
+		} else {
+			var tmp dto.AccountDto
+			if err := json.NewDecoder(resp.Body).Decode(&tmp); err != nil {
+				t.Fatal(err)
+			} else if tmp.Id != account.Id {
+				t.Fatalf("%d is not equal to %d", tmp.Id, account.Id)
+			}
+		}
+	})
 
-	// new art should exist with valid information
-	if arts := GetArts(t); arts[0].Id != art.Id {
-		t.Fatalf("the response (%v) does not have art with id %d", arts, art.Id)
-	} else if arts[0].AuthorId != account.Id {
-		t.Fatalf("the authorId of response (%v) is not equal to '%d'", arts[0].AuthorId, account.Id)
-	}
+	t.Run("Don't create art because basic auth is missing", func(t *testing.T) {
+		if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts/", `{"title":"title"}`, "", ""); err == nil {
+			b, _ := io.ReadAll(resp.Body)
+			t.Fatalf("expected to fail creating art because basic auth is missing\n%s", string(b))
+		}
+	})
 
-	// fail to update art because of invalid credential
-	if _, err := NewRequest(t, http.MethodPut, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), `{"title":"title2"}`, "good", "bad"); err == nil {
-		t.Fatalf("expected to not update art because of invalid credential")
-	}
+	t.Run("Successfully create art", func(t *testing.T) {
+		if resp, err := NewRequest(t, http.MethodPost, "http://localhost:8080/arts/", `{"title":"title"}`, "good", "good"); err != nil {
+			t.Fatal(err)
+		} else if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
+			t.Fatal(err)
+		} else if art.Title != "title" {
+			t.Fatalf("the title of response (%v) is not equal to 'title'", art)
+		} else if art.AuthorId != account.Id {
+			t.Fatalf("the authorId of response (%v) is not equal to '%d'", art, account.Id)
+		}
+	})
 
-	// successfully update existing art
-	if resp, err := NewRequest(t, http.MethodPut, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), `{"title":"title2"}`, "good", "good"); err != nil {
-		t.Fatalf("%s", err)
-	} else if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
-		t.Fatal(err)
-	} else if art.Title != "title2" {
-		t.Fatalf("the title of response (%v) is not equal to 'title2'", art)
-	}
-	if arts := GetArts(t); arts[0].Title != art.Title {
-		t.Fatalf("the response (%v) does not have art with %s", arts, art.Title)
-	}
+	t.Run("The new art exists with valid information", func(t *testing.T) {
+		if arts := GetArts(t); arts[0].Id != art.Id {
+			t.Fatalf("the response (%v) does not have art with id %d", arts, art.Id)
+		} else if arts[0].AuthorId != account.Id {
+			t.Fatalf("the authorId of response (%v) is not equal to '%d'", arts[0].AuthorId, account.Id)
+		}
+	})
 
-	// fail to delete art because of invalid credential
-	if _, err := NewRequest(t, http.MethodDelete, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), "", "good", "bad"); err == nil {
-		t.Fatal("expected to not delete art because of invalid credential")
-	}
-	if arts := GetArts(t); len(arts) != 1 {
-		t.Fatalf("%v length is not 1", arts)
-	}
+	t.Run("Fail to update art because of invalid credential", func(t *testing.T) {
+		if _, err := NewRequest(t, http.MethodPut, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), `{"title":"title2"}`, "good", "bad"); err == nil {
+			t.Fatalf("expected to not update art because of invalid credential")
+		}
+	})
 
-	// successfully delete art
-	if resp, err := NewRequest(t, http.MethodDelete, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), "", "good", "good"); err != nil {
-		t.Fatal(err)
-	} else if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
-		t.Fatal(err)
-	}
-	if arts := GetArts(t); len(arts) != 0 {
-		t.Fatalf("%v length is not 0", arts)
-	}
+	t.Run("Successfully update existing art", func(t *testing.T) {
+		if resp, err := NewRequest(t, http.MethodPut, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), `{"title":"title2"}`, "good", "good"); err != nil {
+			t.Fatalf("%s", err)
+		} else if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
+			t.Fatal(err)
+		} else if art.Title != "title2" {
+			t.Fatalf("the title of response (%v) is not equal to 'title2'", art)
+		}
+		if arts := GetArts(t); arts[0].Title != art.Title {
+			t.Fatalf("the response (%v) does not have art with %s", arts, art.Title)
+		}
+	})
+
+	t.Run("Fail to delete art because of invalid credential", func(t *testing.T) {
+		if _, err := NewRequest(t, http.MethodDelete, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), "", "good", "bad"); err == nil {
+			t.Fatal("expected to not delete art because of invalid credential")
+		}
+		if arts := GetArts(t); len(arts) != 1 {
+			t.Fatalf("%v length is not 1", arts)
+		}
+	})
+
+	t.Run("Successfully delete art", func(t *testing.T) {
+		if resp, err := NewRequest(t, http.MethodDelete, fmt.Sprintf("http://localhost:8080/arts/%d", art.Id), "", "good", "good"); err != nil {
+			t.Fatal(err)
+		} else if err := json.NewDecoder(resp.Body).Decode(&art); err != nil {
+			t.Fatal(err)
+		}
+		if arts := GetArts(t); len(arts) != 0 {
+			t.Fatalf("%v length is not 0", arts)
+		}
+	})
 }
