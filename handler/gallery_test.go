@@ -14,6 +14,7 @@ import (
 	"github.com/nafiz1001/gallery-go/model"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -79,7 +80,9 @@ func TestGallery(t *testing.T) {
 
 		// fmt.Println("Connected!")
 
-		gormDB, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+		gormDB, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Silent),
+		})
 		CheckError(t, err)
 
 		h := GalleryHandler{}
