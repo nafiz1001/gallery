@@ -9,6 +9,12 @@ Download all dependencies
 $ go get ./...
 ```
 
+Run server
+```
+$ go run cmd/main.go 
+2023/01/02 12:00:10 Listening to localhost:8080
+```
+
 Run tests
 ```
 $ go clean -testcache
